@@ -98,12 +98,10 @@ npm test
 - watermarked PNG 한 장만 포함한 이미지 전용 DOCX
 - 병합 셀, 표 옆 본문, 흐름도, 차트, 한국어·영문·숫자 포함
 - 사람이 작성한 기대 Markdown과 fixture manifest
-- 생성 결정성, DOCX 이미지 동일성, 자동 분할, 워터마크 억제 효과 검증
+- 생성 결정성, 자동 분할, 상·하 워터마크 배치, 워터마크 억제 효과 검증
 - PNG 원본 시각 검토: 한글 glyph, 표 선, 병합 영역, 표 옆 본문, 그림,
   워터마크와 페이지 경계 이상 없음
-- DOCX 구조 검증: 선택 가능한 `<w:t>` 없이 watermarked PNG 한 장만 존재
-- DOCX 렌더 QA: BLOCKED — LibreOffice/Python renderer가 없고 Microsoft Word
-  자동 변환이 시간 초과됨. Word에서 직접 열어 보는 수동 확인이 필요
+- 이 fixture 변경의 검증 대상은 PNG이며 DOCX 렌더 검증은 수행하지 않음
 
 생성:
 

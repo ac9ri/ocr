@@ -13,6 +13,29 @@ export const GUTTER_WIDTH = 120;
 
 const FONT_FAMILY = "'Malgun Gothic', 'Noto Sans CJK KR', Arial, sans-serif";
 
+export function formatFixtureTimestamp(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new TypeError(`올바르지 않은 fixture timestamp입니다: ${value}`);
+  }
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  })
+    .formatToParts(date)
+    .reduce((result, part) => {
+      if (part.type !== "literal") result[part.type] = part.value;
+      return result;
+    }, {});
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second} KST`;
+}
+
 function escapeXml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -240,26 +263,25 @@ function barChart(originX) {
   return fragments.join("");
 }
 
-function watermark(originX) {
+function watermark(originX, watermarkText) {
   const centerX = originX + PAGE_WIDTH / 2;
   return [
-    `<g transform="translate(${centerX} 1650) rotate(-29)" opacity="0.23">`,
-    text(0, -45, "SAMPLE", {
-      size: 220,
-      fill: "#777777",
-      weight: 700,
-      anchor: "middle",
-      letterSpacing: 18,
-    }),
-    text(0, 150, "테스트 문서", {
-      size: 128,
-      fill: "#858585",
-      weight: 700,
-      anchor: "middle",
-      letterSpacing: 12,
-    }),
-    "</g>",
-  ].join("");
+    { y: 470, rotation: -7 },
+    { y: 3100, rotation: 7 },
+  ]
+    .map(
+      ({ y, rotation }) =>
+        `<g transform="translate(${centerX} ${y}) rotate(${rotation})" opacity="0.28">` +
+        text(0, 0, watermarkText, {
+          size: 66,
+          fill: "#707070",
+          weight: 700,
+          anchor: "middle",
+          letterSpacing: 3,
+        }) +
+        "</g>",
+    )
+    .join("");
 }
 
 function pageOne(originX) {
@@ -376,7 +398,10 @@ function pageTwo(originX) {
   ].join("");
 }
 
-export function buildFixtureSvg({ withWatermark = true } = {}) {
+export function buildFixtureSvg({
+  withWatermark = true,
+  watermarkText = `SAMPLE ip ${formatFixtureTimestamp()}`,
+} = {}) {
   const rightOrigin = PAGE_WIDTH + GUTTER_WIDTH;
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${FIXTURE_WIDTH}" height="${FIXTURE_HEIGHT}" viewBox="0 0 ${FIXTURE_WIDTH} ${FIXTURE_HEIGHT}">`,
@@ -385,8 +410,8 @@ export function buildFixtureSvg({ withWatermark = true } = {}) {
     `<rect x="0" y="0" width="${PAGE_WIDTH}" height="${FIXTURE_HEIGHT}" fill="#ffffff" stroke="#c7ced8" stroke-width="5"/>`,
     `<rect x="${rightOrigin}" y="0" width="${PAGE_WIDTH}" height="${FIXTURE_HEIGHT}" fill="#ffffff" stroke="#c7ced8" stroke-width="5"/>`,
     `<rect x="${PAGE_WIDTH}" y="0" width="${GUTTER_WIDTH}" height="${FIXTURE_HEIGHT}" fill="#f2f4f7"/>`,
-    withWatermark ? watermark(0) : "",
-    withWatermark ? watermark(rightOrigin) : "",
+    withWatermark ? watermark(0, watermarkText) : "",
+    withWatermark ? watermark(rightOrigin, watermarkText) : "",
     pageOne(0),
     pageTwo(rightOrigin),
     `</svg>`,
@@ -624,7 +649,7 @@ OCR-1 장비는 총 27회 처리했습니다. 재처리 건수는 3회이며 오
 요소별 인식 목표 (%): 본문 91, 표 84, 그림 76, 병합 셀 69
 `;
 
-export async function generateFixtures(outputDirectory) {
+export async function generateFixtures(outputDirectory, { timestamp = new Date() } = {}) {
   const absoluteOutput = path.resolve(outputDirectory);
   await mkdir(absoluteOutput, { recursive: true });
   const fontCacheDirectory = path.join(os.tmpdir(), "wordscan-fontconfig-cache");
@@ -640,8 +665,14 @@ export async function generateFixtures(outputDirectory) {
   process.env.LOCALAPPDATA = fontCacheDirectory;
   process.env.HOME = fontCacheDirectory;
   const sharp = (await import("sharp")).default;
+  const timestampDate = timestamp instanceof Date ? timestamp : new Date(timestamp);
+  if (Number.isNaN(timestampDate.getTime())) {
+    throw new TypeError(`올바르지 않은 fixture timestamp입니다: ${timestamp}`);
+  }
+  const generatedAt = timestampDate.toISOString();
+  const watermarkText = `SAMPLE ip ${formatFixtureTimestamp(timestampDate)}`;
   const cleanSvg = buildFixtureSvg({ withWatermark: false });
-  const watermarkSvg = buildFixtureSvg({ withWatermark: true });
+  const watermarkSvg = buildFixtureSvg({ withWatermark: true, watermarkText });
   const cleanPng = await sharp(Buffer.from(cleanSvg))
     .png({ compressionLevel: 9 })
     .withMetadata({ density: 300 })
@@ -654,6 +685,7 @@ export async function generateFixtures(outputDirectory) {
   const manifest = {
     schemaVersion: 1,
     generatedBy: "scripts/generate-test-fixtures.js",
+    generatedAt,
     dimensions: {
       width: FIXTURE_WIDTH,
       height: FIXTURE_HEIGHT,
@@ -677,6 +709,11 @@ export async function generateFixtures(outputDirectory) {
       "figures",
       "gray-watermark",
     ],
+    watermark: {
+      text: watermarkText,
+      placements: ["top", "bottom"],
+      timeZone: "Asia/Seoul",
+    },
   };
 
   await Promise.all([
@@ -697,6 +734,7 @@ const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1]
 if (invokedPath === import.meta.url) {
   const outputDirectory =
     process.argv[2] ?? path.join("test", "fixtures", "generated");
-  const result = await generateFixtures(outputDirectory);
+  const timestamp = process.env.WORDSCAN_FIXTURE_TIMESTAMP ?? new Date();
+  const result = await generateFixtures(outputDirectory, { timestamp });
   process.stdout.write(`Generated OCR fixtures: ${result.outputDirectory}\n`);
 }

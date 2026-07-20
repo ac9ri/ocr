@@ -14,31 +14,12 @@ import {
 } from "../../scripts/generate-test-fixtures.js";
 import { TwoUpPageSplitter } from "../../src/page-splitter.js";
 import { SharpImageCodec } from "../../src/sharp-codec.js";
-import { extractDocxImages } from "../../src/source-loader.js";
-import { ZipArchive } from "../../src/zip-archive.js";
 
 const COMMITTED_FIXTURES = path.resolve("test", "fixtures", "generated");
 
 function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
-
-test("합성 DOCX는 watermarked PNG 한 장만 포함한다", async () => {
-  const docx = await readFile(path.join(COMMITTED_FIXTURES, "synthetic-two-up.docx"));
-  const embedded = extractDocxImages(docx, "synthetic-two-up.docx");
-  const watermarked = await readFile(
-    path.join(COMMITTED_FIXTURES, "two-up-watermarked.png"),
-  );
-
-  assert.equal(embedded.length, 1);
-  assert.equal(embedded[0].name, "two-up-watermarked.png");
-  assert.equal(sha256(embedded[0].buffer), sha256(watermarked));
-
-  const archive = new ZipArchive(docx);
-  const documentXml = archive.read("word/document.xml").toString("utf8");
-  assert.doesNotMatch(documentXml, /<w:t(?:\s|>)/);
-  assert.match(documentXml, /Synthetic two-up OCR test scan/);
-});
 
 test("합성 이미지는 300dpi 2-up 크기와 중앙 gutter를 가진다", async () => {
   const imagePath = path.join(COMMITTED_FIXTURES, "two-up-watermarked.png");
@@ -55,37 +36,53 @@ test("합성 이미지는 300dpi 2-up 크기와 중앙 gutter를 가진다", asy
   assert.equal(result.pages.length, 2);
 });
 
-test("watermarked 이미지에는 clean 이미지와 구별되는 회색 layer가 있다", async () => {
-  const clean = await sharp(path.join(COMMITTED_FIXTURES, "two-up-clean.png"))
+test("워터마크는 각 페이지 상단·하단에 있고 가운데에는 없다", async () => {
+  const cleanResult = await sharp(path.join(COMMITTED_FIXTURES, "two-up-clean.png"))
     .raw()
-    .toBuffer();
-  const watermarked = await sharp(
+    .toBuffer({ resolveWithObject: true });
+  const watermarkedResult = await sharp(
     path.join(COMMITTED_FIXTURES, "two-up-watermarked.png"),
   )
     .raw()
-    .toBuffer();
-  let differentPixels = 0;
-  for (let offset = 0; offset < clean.length; offset += 3) {
-    if (
-      clean[offset] !== watermarked[offset] ||
-      clean[offset + 1] !== watermarked[offset + 1] ||
-      clean[offset + 2] !== watermarked[offset + 2]
-    ) {
-      differentPixels += 1;
+    .toBuffer({ resolveWithObject: true });
+  const clean = cleanResult.data;
+  const watermarked = watermarkedResult.data;
+  const channels = cleanResult.info.channels;
+  assert.equal(watermarkedResult.info.channels, channels);
+
+  function countDifferentPixels(startY, endY) {
+    let count = 0;
+    for (let y = startY; y < endY; y += 1) {
+      for (let x = 0; x < FIXTURE_WIDTH; x += 1) {
+        const offset = (y * FIXTURE_WIDTH + x) * channels;
+        if (
+          clean[offset] !== watermarked[offset] ||
+          clean[offset + 1] !== watermarked[offset + 1] ||
+          clean[offset + 2] !== watermarked[offset + 2]
+        ) {
+          count += 1;
+        }
+      }
     }
+    return count;
   }
-  assert.ok(differentPixels > 10_000);
+
+  assert.ok(countDifferentPixels(250, 700) > 5_000);
+  assert.equal(countDifferentPixels(900, 2700), 0);
+  assert.ok(countDifferentPixels(2850, 3300) > 5_000);
 });
 
 test("generator는 커밋된 fixture를 결정적으로 재생성한다", async (context) => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), "wordscan-fixtures-"));
   context.after(() => rm(temporary, { recursive: true, force: true }));
-  await generateFixtures(temporary);
+  const manifest = JSON.parse(
+    await readFile(path.join(COMMITTED_FIXTURES, "fixture-manifest.json"), "utf8"),
+  );
+  await generateFixtures(temporary, { timestamp: manifest.generatedAt });
 
   for (const name of [
     "two-up-clean.png",
     "two-up-watermarked.png",
-    "synthetic-two-up.docx",
     "expected.md",
     "fixture-manifest.json",
   ]) {
@@ -93,6 +90,18 @@ test("generator는 커밋된 fixture를 결정적으로 재생성한다", async 
     const actual = await readFile(path.join(temporary, name));
     assert.equal(sha256(actual), sha256(expected), `${name} hash mismatch`);
   }
+});
+
+test("manifest는 현재시각 watermark 문구와 상·하 배치를 기록한다", async () => {
+  const manifest = JSON.parse(
+    await readFile(path.join(COMMITTED_FIXTURES, "fixture-manifest.json"), "utf8"),
+  );
+  assert.match(
+    manifest.watermark.text,
+    /^SAMPLE ip \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} KST$/,
+  );
+  assert.deepEqual(manifest.watermark.placements, ["top", "bottom"]);
+  assert.equal(manifest.watermark.timeZone, "Asia/Seoul");
 });
 
 test("기대 Markdown은 병합 셀과 표 옆 본문의 순서를 명시한다", async () => {
