@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/generate-test-fixtures.js",
+  "dimensions": {
+    "width": 5080,
+    "height": 3508,
+    "pageWidth": 2480,
+    "gutterWidth": 120,
+    "densityDpi": 300
+  },
+  "files": {
+    "cleanImage": "two-up-clean.png",
+    "watermarkedImage": "two-up-watermarked.png",
+    "wordDocument": "synthetic-two-up.docx",
+    "expectedMarkdown": "expected.md"
+  },
+  "coverage": [
+    "two-up-landscape",
+    "korean-english-numbers",
+    "table",
+    "rowspan",
+    "colspan",
+    "table-adjacent-text",
+    "figures",
+    "gray-watermark"
+  ]
+}

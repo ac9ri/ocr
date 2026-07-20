@@ -16,6 +16,9 @@
 상세 결정과 요구사항 추적은 [설계 문서](docs/DESIGN.md), 단계별 검증은
 [Phase 기록](docs/PHASES.md)을 참고하세요.
 
+개인정보 없는 합성 테스트 PNG/DOCX를 만드는 방법은
+[테스트 fixture 제작 안내](docs/TEST_FIXTURES.md)를 참고하세요.
+
 ## 사전 요구사항
 
 1. Node.js 20 이상
@@ -79,6 +82,12 @@ output/
 
 ```powershell
 npm test
+```
+
+합성 2-up 이미지, 이미지 전용 DOCX와 기대 Markdown 생성:
+
+```powershell
+npm run fixtures:generate
 ```
 
 Phase별 실행:

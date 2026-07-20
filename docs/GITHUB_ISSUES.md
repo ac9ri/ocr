@@ -65,6 +65,7 @@ Labels: `validation`, `needs-sample`
 
 완료 조건:
 
+- 합성 fixture는 `test/fixtures/generated/`에 준비됨
 - 익명화한 실제 스캔/정답 골든셋 구축
 - CER/TEDS/그림 recall 측정
 - watermark mode와 split threshold 튜닝

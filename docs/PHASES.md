@@ -84,11 +84,32 @@ npm test
 결과:
 
 - Phase 4: 5 tests, 5 pass, 0 fail
-- 전체: 29 pass, 0 fail (`node --test`가 test helper 모듈 1개도 pass로 집계)
+- 전체: 35 pass, 0 fail (`node --test`가 test helper 모듈 1개도 pass로 집계)
 - 모든 `src/*.js`: `node --check` 통과
 - `npm audit --omit=dev`: 취약점 0건
 - 실제 PP-StructureV3 추론: BLOCKED — 현재 PC에 Python/PaddleOCR 및 실제
   스캔 샘플이 없음
+
+## 합성 테스트 fixture
+
+상태: DONE
+
+- 300dpi `5080×3508` clean/watermarked 2-up PNG
+- watermarked PNG 한 장만 포함한 이미지 전용 DOCX
+- 병합 셀, 표 옆 본문, 흐름도, 차트, 한국어·영문·숫자 포함
+- 사람이 작성한 기대 Markdown과 fixture manifest
+- 생성 결정성, DOCX 이미지 동일성, 자동 분할, 워터마크 억제 효과 검증
+- PNG 원본 시각 검토: 한글 glyph, 표 선, 병합 영역, 표 옆 본문, 그림,
+  워터마크와 페이지 경계 이상 없음
+- DOCX 구조 검증: 선택 가능한 `<w:t>` 없이 watermarked PNG 한 장만 존재
+- DOCX 렌더 QA: BLOCKED — LibreOffice/Python renderer가 없고 Microsoft Word
+  자동 변환이 시간 초과됨. Word에서 직접 열어 보는 수동 확인이 필요
+
+생성:
+
+```powershell
+npm run fixtures:generate
+```
 
 ## GitHub 이슈 등록
 
