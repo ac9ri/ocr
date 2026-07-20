@@ -39,4 +39,8 @@ test("합성 회색 워터마크 억제 후 clean 이미지에 더 가까워진�
   const after = meanAbsoluteDifference(clean, suppressed, clean, watermarked);
   assert.ok(before > 0);
   assert.ok(after < before, `expected ${after} to be less than ${before}`);
+  assert.ok(
+    after / before < 0.05,
+    `expected watermark residual ratio ${after / before} to be less than 0.05`,
+  );
 });

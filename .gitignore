@@ -1,4 +1,6 @@
 node_modules/
+.venv-ocr/
+.ocr-setup/
 coverage/
 dist/
 output/

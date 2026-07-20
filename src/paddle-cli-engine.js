@@ -62,12 +62,14 @@ async function collectAssets(markdown, markdownPath, outputDirectory) {
 export class PaddleCliEngine {
   constructor({
     command = "paddleocr",
+    commandArguments = [],
     device = "cpu",
     recognitionModel = "korean_PP-OCRv5_mobile_rec",
     timeoutMs = 30 * 60 * 1000,
     runner = runProcess,
   } = {}) {
     this.command = command;
+    this.commandArguments = commandArguments;
     this.device = device;
     this.recognitionModel = recognitionModel;
     this.timeoutMs = timeoutMs;
@@ -105,7 +107,10 @@ export class PaddleCliEngine {
   }
 
   async recognize(inputPath, outputDirectory) {
-    const args = this.buildArguments(inputPath, outputDirectory);
+    const args = [
+      ...this.commandArguments,
+      ...this.buildArguments(inputPath, outputDirectory),
+    ];
     const processResult = await this.runner(this.command, args, {
       cwd: outputDirectory,
       timeoutMs: this.timeoutMs,

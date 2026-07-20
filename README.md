@@ -15,6 +15,8 @@
 
 상세 결정과 요구사항 추적은 [설계 문서](docs/DESIGN.md), 단계별 검증은
 [Phase 기록](docs/PHASES.md)을 참고하세요.
+[합성 PNG 실제 OCR 검증](docs/REAL_OCR_VALIDATION.md)에는 측정 결과와 알려진
+인식 한계를 기록했습니다.
 
 개인정보 없는 합성 테스트 PNG/DOCX를 만드는 방법은
 [테스트 fixture 제작 안내](docs/TEST_FIXTURES.md)를 참고하세요.
@@ -22,16 +24,19 @@
 ## 사전 요구사항
 
 1. Node.js 20 이상
-2. Python과 PaddlePaddle 3.0 이상
-3. PaddleOCR 3.x
+2. Python 3.11
+3. `requirements-ocr.txt`에 고정된 PaddlePaddle/PaddleOCR/PaddleX 조합
 
 PaddlePaddle 설치는 CPU/GPU와 운영체제에 따라 다르므로
 [공식 PaddleOCR 설치 문서](https://paddlepaddle.github.io/PaddleOCR/main/en/version3.x/installation.html)를
-따르세요. 애플리케이션 의존성은 다음처럼 설치합니다.
+따르세요. CPU 실행용 Python 의존성은 다음처럼 격리 환경에 설치합니다.
+PaddleOCR 3.1.0과 최신 PaddleX를 섞으면 내부 API가 호환되지 않으므로 이 파일의
+버전 고정을 유지해야 합니다.
 
 ```powershell
 npm install
-python -m pip install paddleocr
+python -m venv .venv-ocr
+.\.venv-ocr\Scripts\python.exe -m pip install -r requirements-ocr.txt
 ```
 
 PaddleOCR 모델은 최초 실행 시 내려받습니다. 모델 저장소 접근이 제한된 환경에서는
@@ -41,6 +46,13 @@ PaddleOCR 문서에 따라 `PADDLE_PDX_MODEL_SOURCE=BOS`를 설정할 수 있습
 
 ```powershell
 npm exec wordscan-ocr -- .\scan.docx -o .\output
+```
+
+이미지를 직접 처리하는 경우:
+
+```powershell
+npm exec wordscan-ocr -- .\scan.png -o .\output `
+  --paddle-python .\.venv-ocr\Scripts\python.exe
 ```
 
 GPU, 강한 워터마크 억제, 수동 분할 위치를 함께 지정하는 예:
@@ -71,6 +83,7 @@ output/
     --watermark <mode>         off|conservative|strong
     --device <device>          cpu|gpu:0 등
     --paddle-command <path>    PaddleOCR 실행 명령/경로
+    --paddle-python <path>     bundled Markdown bridge를 실행할 Python 경로
     --keep-work                전처리 및 OCR 임시 결과 보존
 ```
 
@@ -99,6 +112,6 @@ npm run test:phase3
 npm run test:phase4
 ```
 
-실제 인식 품질을 승인하려면 표, 병합 셀, 표 옆 본문, 그림, 서로 다른 농도의
-워터마크가 포함된 익명화 골든셋이 필요합니다. 현재 환경에는 해당 샘플이 없으므로
-실문서 정확도 평가는 별도 인수 단계로 남아 있습니다.
+합성 PNG 실제 OCR 검증은 CER 5.93%, 핵심 문구 recall 90.91%로 통과했습니다.
+실문서 품질을 승인하려면 표, 병합 셀, 표 옆 본문, 그림, 서로 다른 농도의
+워터마크가 포함된 익명화 골든셋이 추가로 필요합니다.

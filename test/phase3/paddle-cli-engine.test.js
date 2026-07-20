@@ -55,6 +55,20 @@ test("Markdown 결과가 없으면 명시적 오류를 반환한다", async (con
   );
 });
 
+test("Python bridge 경로를 OCR 인자 앞에 전달한다", () => {
+  const engine = new PaddleCliEngine({
+    command: "python",
+    commandArguments: ["scripts/paddle-structure-bridge.py"],
+  });
+  const args = [
+    ...engine.commandArguments,
+    ...engine.buildArguments("page.png", "result"),
+  ];
+
+  assert.equal(args[0], "scripts/paddle-structure-bridge.py");
+  assert.equal(args[1], "pp_structurev3");
+});
+
 test("engine 실행 오류를 숨기지 않는다", async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "wordscan-engine-error-"));
   context.after(() => rm(root, { recursive: true, force: true }));

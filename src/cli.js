@@ -18,6 +18,7 @@ const HELP = `wordscan-ocr - 2-up Word 스캔 문서를 Markdown으로 변환
       --watermark <mode>         off|conservative|strong (기본값: conservative)
       --device <device>          cpu|gpu:0 등 (기본값: cpu)
       --paddle-command <path>    PaddleOCR 실행 명령 (기본값: paddleocr)
+      --paddle-python <path>     bundled bridge를 실행할 Python 경로
       --keep-work                전처리/OCR 임시 파일 보존
   -h, --help                     도움말
   -v, --version                  버전
@@ -39,6 +40,7 @@ export function parseCliArguments(argv) {
     watermarkMode: "conservative",
     device: "cpu",
     paddleCommand: "paddleocr",
+    paddlePython: null,
     keepWork: false,
     help: false,
     version: false,
@@ -79,6 +81,9 @@ export function parseCliArguments(argv) {
     } else if (argument === "--paddle-command") {
       options.paddleCommand = requiredValue(argv, index, argument);
       index += 1;
+    } else if (argument === "--paddle-python") {
+      options.paddlePython = path.resolve(requiredValue(argv, index, argument));
+      index += 1;
     } else if (argument === "--keep-work") {
       options.keepWork = true;
     } else if (argument.startsWith("-")) {
@@ -103,6 +108,13 @@ function progressLine(event) {
     default:
       return null;
   }
+}
+
+function diagnosticTail(error, limit = 4_000) {
+  if (!(error instanceof WordscanError) || typeof error.details.stderr !== "string") {
+    return "";
+  }
+  return error.details.stderr.trim().slice(-limit);
 }
 
 export async function runCli(
@@ -141,6 +153,8 @@ export async function runCli(
   } catch (error) {
     const code = error instanceof WordscanError ? error.code : "UNEXPECTED_ERROR";
     stderr.write(`[${code}] ${error.message}\n`);
+    const diagnostic = diagnosticTail(error);
+    if (diagnostic) stderr.write(`${diagnostic}\n`);
     return 1;
   }
 }

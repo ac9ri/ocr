@@ -4,13 +4,13 @@ const PRESETS = {
   off: null,
   conservative: {
     minimumTone: 150,
-    maximumTone: 235,
+    maximumTone: 205,
     chromaTolerance: 18,
-    strength: 0.75,
+    strength: 1,
   },
   strong: {
     minimumTone: 125,
-    maximumTone: 245,
+    maximumTone: 190,
     chromaTolerance: 30,
     strength: 1,
   },

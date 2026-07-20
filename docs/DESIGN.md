@@ -122,6 +122,8 @@ manifest에는 입력, 생성 시각, 설정, 페이지별 OCR 경고 및 asset 
 - Phase 2: 워터마크 약화, 전경 보존, layout 읽기 순서
 - Phase 3: Paddle CLI 인자/오류, 병합 셀 및 asset 경로
 - Phase 4: 가짜 OCR 엔진을 사용한 CLI end-to-end, manifest, 실패 경로
+- Phase 5: 합성 watermarked PNG를 실제 PP-StructureV3 CPU 추론으로 처리하고
+  CER, 핵심 문구, 의미 기반 병합 셀, 읽기 순서, 그림, 워터마크를 자동 평가
 - 합성 fixture: 300dpi 2-up PNG와 해당 PNG 한 장만 포함한 DOCX를 결정적으로
   생성하고, 병합 셀·표 옆 본문·그림·회색 워터마크를 회귀 검증
 - 수동/인수: 실제 문서 골든셋에서 문자 오류율(CER), 표 구조 정확도(TEDS),

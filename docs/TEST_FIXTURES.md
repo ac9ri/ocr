@@ -66,19 +66,27 @@ Word 문서에서 글자나 표를 마우스로 선택할 수 있다면 스캔 �
 PaddleOCR가 설치된 환경:
 
 ```powershell
-npm exec wordscan-ocr -- `
-  .\test\fixtures\generated\synthetic-two-up.docx `
-  -o .\output\synthetic
+node .\src\cli.js `
+  .\test\fixtures\generated\two-up-watermarked.png `
+  -o .\output\synthetic-image `
+  --paddle-python .\.venv-ocr\Scripts\python.exe
+
+npm run fixtures:evaluate
 ```
 
-결과를 `expected.md`와 비교한다. OCR 결과는 모델과 장치에 따라 미세하게 달라질 수
-있으므로 전체 문자열 일치보다 다음 기준을 권장한다.
+DOCX는 이 검증에 사용하지 않는다. 평가기는 결과를 `expected.md`와 비교하고
+`output/synthetic-image/evaluation.json`을 생성한다. OCR 결과는 모델과 장치에
+따라 미세하게 달라질 수 있으므로 전체 문자열 일치와 함께 다음 구조 기준을
+검사한다.
 
 - 본문: 문자 오류율(CER)
 - 표: 병합 셀과 행/열 구조
 - 읽기 순서: 표가 `운영 요약`보다 먼저 나오는지
 - 그림: page별 asset 존재 여부
 - 워터마크: `SAMPLE ip <날짜> <시간>`이 본문으로 오인되지 않는지
+
+2026-07-20 실제 CPU 검증 결과는
+[합성 PNG 실제 OCR 검증](REAL_OCR_VALIDATION.md)을 참고한다.
 
 합성 fixture는 기능 회귀에 적합하지만 실제 스캐너의 기울기, 압축 노이즈, 종이
 질감까지 대표하지 않는다. 최종 인수에는 익명화한 실제 문서 골든셋도 필요하다.

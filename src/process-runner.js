@@ -1,21 +1,18 @@
 import { spawn } from "node:child_process";
 import { WordscanError } from "./errors.js";
 
-export async function runProcess(command, args, { cwd, env, timeoutMs = 30 * 60 * 1000 } = {}) {
+export async function runProcess(
+  command,
+  args,
+  { cwd, env, timeoutMs = 30 * 60 * 1000, spawnImpl = spawn } = {},
+) {
   return await new Promise((resolve, reject) => {
     let settled = false;
-    const child = spawn(command, args, {
-      cwd,
-      env: { ...process.env, ...env },
-      windowsHide: true,
-      shell: false,
-    });
+    let timer;
     const stdout = [];
     const stderr = [];
 
-    child.stdout?.on("data", (chunk) => stdout.push(chunk));
-    child.stderr?.on("data", (chunk) => stderr.push(chunk));
-    child.on("error", (error) => {
+    const rejectStart = (error) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
@@ -26,7 +23,24 @@ export async function runProcess(command, args, { cwd, env, timeoutMs = 30 * 60 
           details: { command, args },
         }),
       );
-    });
+    };
+
+    let child;
+    try {
+      child = spawnImpl(command, args, {
+        cwd,
+        env: { ...process.env, ...env },
+        windowsHide: true,
+        shell: false,
+      });
+    } catch (error) {
+      rejectStart(error);
+      return;
+    }
+
+    child.stdout?.on("data", (chunk) => stdout.push(chunk));
+    child.stderr?.on("data", (chunk) => stderr.push(chunk));
+    child.on("error", rejectStart);
     child.on("close", (exitCode, signal) => {
       if (settled) return;
       settled = true;
@@ -50,7 +64,7 @@ export async function runProcess(command, args, { cwd, env, timeoutMs = 30 * 60 
       }
     });
 
-    const timer = setTimeout(() => {
+    timer = setTimeout(() => {
       if (settled) return;
       settled = true;
       child.kill();

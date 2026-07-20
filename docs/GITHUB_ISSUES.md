@@ -70,3 +70,13 @@ Labels: `validation`, `needs-sample`
 - CER/TEDS/그림 recall 측정
 - watermark mode와 split threshold 튜닝
 - 인수 결과 문서화
+
+## Issue 6 — [Phase 5] 합성 PNG 실제 PP-StructureV3 인수 검증
+
+URL: <https://github.com/ac9ri/ocr/issues/6>
+
+- 실제 CPU OCR 환경과 호환 버전 고정
+- bundled Markdown bridge
+- 워터마크 억제 튜닝
+- CER/핵심 문구/병합 셀/읽기 순서/그림 자동 평가
+- 합성 PNG 결과와 남은 인식 한계 문서화

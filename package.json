@@ -7,6 +7,7 @@
     "wordscan-ocr": "./src/cli.js"
   },
   "scripts": {
+    "fixtures:evaluate": "node scripts/evaluate-test-image.js",
     "fixtures:generate": "node scripts/generate-test-fixtures.js",
     "test": "node --test",
     "test:phase1": "node --test \"test/phase1/*.test.js\"",

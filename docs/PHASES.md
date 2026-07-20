@@ -47,7 +47,7 @@ npm run test:phase1
 npm run test:phase2
 ```
 
-결과: 8 tests, 8 pass, 0 fail
+결과: 9 tests, 9 pass, 0 fail
 
 ## Phase 3 — OCR와 Markdown
 
@@ -64,7 +64,7 @@ npm run test:phase2
 npm run test:phase3
 ```
 
-결과: 6 tests, 6 pass, 0 fail
+결과: 9 tests, 9 pass, 0 fail
 
 ## Phase 4 — 통합 CLI와 인수 검증
 
@@ -83,12 +83,11 @@ npm test
 
 결과:
 
-- Phase 4: 5 tests, 5 pass, 0 fail
-- 전체: 35 pass, 0 fail (`node --test`가 test helper 모듈 1개도 pass로 집계)
+- Phase 4: 9 tests, 9 pass, 0 fail
+- 전체: 42 pass, 0 fail (`node --test`가 test helper 모듈 1개도 pass로 집계)
 - 모든 `src/*.js`: `node --check` 통과
 - `npm audit --omit=dev`: 취약점 0건
-- 실제 PP-StructureV3 추론: BLOCKED — 현재 PC에 Python/PaddleOCR 및 실제
-  스캔 샘플이 없음
+- 실제 PP-StructureV3 합성 PNG 추론: Phase 5에서 통과
 
 ## 합성 테스트 fixture
 
@@ -109,6 +108,24 @@ npm test
 npm run fixtures:generate
 ```
 
+## Phase 5 — 합성 PNG 실제 OCR 인수 검증
+
+상태: DONE
+
+- Python 3.11 격리 환경과 Paddle CPU 의존성 버전 고정
+- 실제 PP-StructureV3로 watermarked PNG 1장 → 2쪽 Markdown 실행
+- PaddleX 시각화 저장 오류를 우회하는 Markdown bridge
+- 워터마크 잔차 회귀 기준과 의미 기반 병합 셀 평가기
+- CER, 핵심 문구 recall, 표, 읽기 순서, 그림, 워터마크 판정
+
+결과:
+
+- CER 5.93%, 핵심 문구 recall 90.91%
+- 2쪽, 표 2개, 그림 2개
+- `A-01`/`OCR-1` rowspan과 두 표 헤더 colspan 보존
+- 표 → 운영 요약 순서 및 `SAMPLE` 미검출
+- 상세: [합성 PNG 실제 OCR 검증](REAL_OCR_VALIDATION.md)
+
 ## GitHub 이슈 등록
 
 상태: DONE
@@ -119,6 +136,7 @@ npm run fixtures:generate
 - Phase 3: <https://github.com/ac9ri/ocr/issues/3>
 - Phase 4: <https://github.com/ac9ri/ocr/issues/4>
 - 실제 문서 골든셋: <https://github.com/ac9ri/ocr/issues/5>
+- Phase 5: <https://github.com/ac9ri/ocr/issues/6>
 
 ## 실제 문서 인수 시험(샘플 수령 후)
 

@@ -1,12 +1,17 @@
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadInputSources } from "./source-loader.js";
 import { SharpImageCodec } from "./sharp-codec.js";
 import { TwoUpPageSplitter } from "./page-splitter.js";
 import { WatermarkSuppressor } from "./watermark-suppressor.js";
 import { PaddleCliEngine } from "./paddle-cli-engine.js";
 import { materializePage, writeMarkdownDocument } from "./markdown-assembler.js";
+
+const PADDLE_BRIDGE_SCRIPT = fileURLToPath(
+  new URL("../scripts/paddle-structure-bridge.py", import.meta.url),
+);
 
 function notify(callback, event) {
   callback?.(event);
@@ -24,6 +29,7 @@ export async function runPipeline({
   watermarkMode = "conservative",
   device = "cpu",
   paddleCommand = "paddleocr",
+  paddlePython = null,
   keepWork = false,
   onProgress,
   dependencies = {},
@@ -39,7 +45,11 @@ export async function runPipeline({
     dependencies.suppressor ?? new WatermarkSuppressor({ mode: watermarkMode });
   const engine =
     dependencies.engine ??
-    new PaddleCliEngine({ command: paddleCommand, device });
+    new PaddleCliEngine({
+      command: paddlePython ?? paddleCommand,
+      commandArguments: paddlePython ? [PADDLE_BRIDGE_SCRIPT] : [],
+      device,
+    });
 
   await mkdir(absoluteOutput, { recursive: true });
   const workDirectory = await mkdtemp(path.join(absoluteOutput, ".wordscan-work-"));
@@ -120,6 +130,7 @@ export async function runPipeline({
         watermarkMode,
         device,
         paddleCommand,
+        paddlePython,
       },
       startedAt,
       completedAt: new Date().toISOString(),
