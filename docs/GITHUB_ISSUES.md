@@ -1,0 +1,71 @@
+# GitHub 이슈 백로그
+
+공개 저장소: <https://github.com/ac9ri/ocr>
+
+아래 이슈 5건과 관련 label을 실제 저장소에 등록했다. 구현이 끝난 Phase 1~4
+이슈는 완료 상태로 닫고, 실제 샘플이 필요한 골든셋 이슈는 열어 둔다.
+
+## Issue 1 — [Phase 1] DOCX 이미지 추출 및 2-up 분할
+
+<https://github.com/ac9ri/ocr/issues/1>
+
+Labels: `phase-1`, `enhancement`, `test`
+
+완료 조건:
+
+- DOCX의 이미지 관계를 본문 순서대로 추출
+- 이미지 한 장을 좌/우 페이지로 자동 분할
+- 수동 split ratio 지원
+- Phase 1 단위 테스트 통과
+
+## Issue 2 — [Phase 2] 회색 워터마크 억제 및 읽기 순서
+
+<https://github.com/ac9ri/ocr/issues/2>
+
+Labels: `phase-2`, `enhancement`, `test`
+
+완료 조건:
+
+- 회색 저대비 watermark를 약화
+- 검은 글자와 표 선 보존
+- 표 옆 본문 block을 누락 없이 정렬
+- Phase 2 단위 테스트 통과
+
+## Issue 3 — [Phase 3] PP-StructureV3 및 Markdown 변환
+
+<https://github.com/ac9ri/ocr/issues/3>
+
+Labels: `phase-3`, `enhancement`, `test`
+
+완료 조건:
+
+- 한국어 PP-OCRv5 모델을 사용하는 PP-StructureV3 adapter
+- 표와 그림 추출
+- `rowspan`/`colspan` 유지
+- asset link 재작성과 Phase 3 테스트 통과
+
+## Issue 4 — [Phase 4] CLI·manifest·통합 테스트
+
+<https://github.com/ac9ri/ocr/issues/4>
+
+Labels: `phase-4`, `enhancement`, `test`
+
+완료 조건:
+
+- DOCX/이미지 입력 CLI 제공
+- 단일 Markdown, assets, manifest 출력
+- 오류 종료 코드와 진단 제공
+- 전체 자동 테스트와 운영 문서 완료
+
+## Issue 5 — 실제 문서 골든셋 인수 시험
+
+<https://github.com/ac9ri/ocr/issues/5>
+
+Labels: `validation`, `needs-sample`
+
+완료 조건:
+
+- 익명화한 실제 스캔/정답 골든셋 구축
+- CER/TEDS/그림 recall 측정
+- watermark mode와 split threshold 튜닝
+- 인수 결과 문서화

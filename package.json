@@ -1,0 +1,24 @@
+{
+  "name": "wordscan-ocr",
+  "version": "0.1.0",
+  "description": "Extract structured Markdown from two-up scanned pages embedded in Word documents.",
+  "type": "module",
+  "bin": {
+    "wordscan-ocr": "./src/cli.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "test:phase1": "node --test \"test/phase1/*.test.js\"",
+    "test:phase2": "node --test \"test/phase2/*.test.js\"",
+    "test:phase3": "node --test \"test/phase3/*.test.js\"",
+    "test:phase4": "node --test \"test/phase4/*.test.js\"",
+    "lint": "node --check src/cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "sharp": "^0.34.3"
+  },
+  "license": "MIT"
+}
