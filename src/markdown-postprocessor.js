@@ -75,14 +75,157 @@ function repairTable(tableHtml) {
   return { html: repaired, extracted };
 }
 
-function extractAdjacentTextFromTables(markdown) {
+function validBox(box) {
+  return (
+    Array.isArray(box) &&
+    box.length === 4 &&
+    box.every(Number.isFinite) &&
+    box[2] > box[0] &&
+    box[3] > box[1]
+  );
+}
+
+function median(values) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+}
+
+function adjacentBodyRegions(tableCellBoxes) {
+  const boxes = (tableCellBoxes ?? []).filter(validBox);
+  const medianHeight = median(boxes.map((box) => box[3] - box[1]));
+  if (medianHeight === 0) return [];
+  return boxes.filter(
+    (box) =>
+      box[3] - box[1] >= Math.max(80, medianHeight * 2.5) &&
+      box[2] - box[0] >= 60,
+  );
+}
+
+function linesInRegion(lines, region) {
+  return (lines ?? [])
+    .filter(
+      (line) =>
+        typeof line?.text === "string" &&
+        line.text.trim() &&
+        validBox(line.box),
+    )
+    .filter((line) => {
+      const centerX = (line.box[0] + line.box[2]) / 2;
+      const centerY = (line.box[1] + line.box[3]) / 2;
+      return (
+        centerX >= region[0] - 8 &&
+        centerX <= region[2] + 8 &&
+        centerY >= region[1] - 12 &&
+        centerY <= region[3] + 24
+      );
+    })
+    .sort(
+      (left, right) =>
+        (left.box[1] + left.box[3]) / 2 -
+          (right.box[1] + right.box[3]) / 2 ||
+        left.box[0] - right.box[0],
+    );
+}
+
+function groupLinesByVisualRow(lines) {
+  const rows = [];
+  for (const line of lines) {
+    const centerY = (line.box[1] + line.box[3]) / 2;
+    const height = line.box[3] - line.box[1];
+    const previous = rows.at(-1);
+    if (
+      previous &&
+      Math.abs(centerY - previous.centerY) <= Math.max(10, Math.min(height, previous.height) * 0.6)
+    ) {
+      previous.lines.push(line);
+      previous.centerY =
+        previous.lines.reduce(
+          (sum, item) => sum + (item.box[1] + item.box[3]) / 2,
+          0,
+        ) / previous.lines.length;
+      previous.height = Math.max(previous.height, height);
+    } else {
+      rows.push({ lines: [line], centerY, height });
+    }
+  }
+  return rows.map((row) =>
+    row.lines
+      .sort((left, right) => left.box[0] - right.box[0])
+      .map((line) => line.text.trim())
+      .join(" "),
+  );
+}
+
+function formatRecoveredAdjacentRows(rows) {
+  const paragraphs = [];
+  for (const row of rows) {
+    const startsParagraph =
+      /^\d{1,3}\)\s*/.test(row) ||
+      /^\d+(?:\.\d+)+(?:\s|$)/.test(row) ||
+      /^\d+\.(?!\d)/.test(row);
+    if (paragraphs.length === 0 || startsParagraph) {
+      paragraphs.push(row);
+    } else {
+      paragraphs[paragraphs.length - 1] += ` ${row}`;
+    }
+  }
+  return paragraphs.join("\n\n");
+}
+
+function recoveredAdjacentText(extracted, rawTextLines, fallbackTextLines, regions) {
+  const candidates = [];
+  for (const [priority, lines] of [rawTextLines, fallbackTextLines].entries()) {
+    for (const region of regions) {
+      const rows = groupLinesByVisualRow(linesInRegion(lines, region));
+      const text = formatRecoveredAdjacentRows(rows);
+      const markerCount = text.match(/(?:^|\n\n)\d{1,3}\)\s*/g)?.length ?? 0;
+      const sourceLength = normalizedText(extracted).length;
+      const recoveredLength = normalizedText(text).length;
+      const lengthRatio = sourceLength > 0 ? recoveredLength / sourceLength : 0;
+      const similarity = candidateSimilarity(extracted, text);
+      if (
+        markerCount >= 2 &&
+        lengthRatio >= 0.65 &&
+        lengthRatio <= 1.5 &&
+        similarity >= 0.65
+      ) {
+        candidates.push({ text, similarity, priority });
+      }
+    }
+  }
+  return candidates.sort(
+    (left, right) =>
+      right.similarity - left.similarity || left.priority - right.priority,
+  )[0]?.text;
+}
+
+function extractAdjacentTextFromTables(
+  markdown,
+  rawTextLines = [],
+  fallbackTextLines = [],
+  tableCellBoxes = [],
+) {
+  const regions = adjacentBodyRegions(tableCellBoxes);
   const tableBlock = /(<div\b[^>]*>\s*<html><body>\s*)?(<table\b[\s\S]*?<\/table>)(\s*<\/body><\/html>\s*<\/div>)?/gi;
   return markdown.replace(
     tableBlock,
     (full, prefix = "", table = "", suffix = "") => {
       const repaired = repairTable(table);
       if (repaired.extracted.length === 0) return full;
-      return `${prefix}${repaired.html}${suffix}\n\n${repaired.extracted.join("\n\n")}`;
+      const extracted = repaired.extracted.map(
+        (text) =>
+          recoveredAdjacentText(
+            text,
+            rawTextLines,
+            fallbackTextLines,
+            regions,
+          ) ?? text,
+      );
+      return `${prefix}${repaired.html}${suffix}\n\n${extracted.join("\n\n")}`;
     },
   );
 }
@@ -474,6 +617,7 @@ export function postprocessMarkdown(
     rawTextLines = [],
     fallbackTextLines = [],
     structureBlocks = [],
+    tableCellBoxes = [],
     rawCoordinateScale = 1,
     fallbackCoordinateScale = 1,
   } = {},
@@ -491,7 +635,14 @@ export function postprocessMarkdown(
   );
   return recoverMissingNumberedParagraphs(
     recoverMissingNotes(
-      escapeParenthesizedOrderedMarkers(extractAdjacentTextFromTables(textRecovered)),
+      escapeParenthesizedOrderedMarkers(
+        extractAdjacentTextFromTables(
+          textRecovered,
+          normalizedRawLines,
+          normalizedFallbackLines,
+          tableCellBoxes,
+        ),
+      ),
       normalizedRawLines,
     ),
     normalizedRawLines,

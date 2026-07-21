@@ -100,3 +100,12 @@ URL: <https://github.com/ac9ri/ocr/issues/8>
 - 문장 anchor 기반 좌표 정렬과 깨진 block 제한 교체
 - 정상 구조 문장과 표 block의 덮어쓰기 방지
 - 기본 `text-safe` 실행 및 비공개 이미지 E2E 검증
+
+## Issue 9 — [Phase 8] 표 인접 소제목의 좌표 기반 OCR 복구
+
+URL: <https://github.com/ac9ri/ocr/issues/9>
+
+- 큰 자간 소제목이 구조 OCR의 장기 병합셀 안에서 손상되는 문제 재현
+- 표 셀 좌표와 `text-safe` 원문 OCR 박스를 이용한 시각 행 재조립
+- 같은 행의 분리 단어를 좌→우 순서로 결합
+- 실제 표 데이터 혼입 방지 회귀 테스트와 비공개 이미지 재검증

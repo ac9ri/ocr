@@ -30,6 +30,42 @@ test("표 오른쪽 번호 본문으로 오인된 긴 rowspan 셀을 표 밖으�
   assert.match(result, /^2\\\) 두 번째 정의/m);
 });
 
+test("표 인접 본문의 같은 줄에 분리된 소제목을 원문 OCR 좌표로 복구한다", () => {
+  const markdown = `<table>
+<tr><td>A</td><td>B</td><td>C</td><td>D</td><td rowspan="4">3. 용어 정의 3.1 I8 1) 첫 번째 정의가 충분히 길게 이어지는 문장입니다 2) 두 번째 정의도 별도 본문으로 이어집니다</td></tr>
+<tr><td>A1</td><td>B1</td><td>C1</td><td>D1</td></tr>
+<tr><td>A2</td><td>B2</td><td>C2</td><td>D2</td></tr>
+<tr><td>A3</td><td>B3</td><td>C3</td><td>D3</td></tr>
+</table>`;
+  const result = postprocessMarkdown(markdown, {
+    rawCoordinateScale: 2,
+    tableCellBoxes: [
+      [20, 20, 180, 65],
+      [190, 20, 400, 65],
+      [20, 70, 180, 115],
+      [190, 70, 400, 115],
+      [700, 35, 890, 390],
+    ],
+    rawTextLines: [
+      { text: "실제 표 데이터", box: [100, 100, 600, 140] },
+      { text: "3. 용어 정의", box: [1_400, 200, 1_720, 260] },
+      { text: "3.1", box: [1_400, 300, 1_490, 350] },
+      { text: "용어", box: [1_560, 296, 1_670, 354] },
+      { text: "1) 첫 번째 정의가", box: [1_400, 440, 1_730, 490] },
+      { text: "충분히 길게 이어지는 문장입니다", box: [1_400, 510, 1_770, 560] },
+      { text: "2) 두 번째 정의도 별도 본문으로 이어집니다", box: [1_400, 760, 1_770, 810] },
+    ],
+  });
+
+  const table = result.match(/<table[\s\S]*?<\/table>/i)?.[0] ?? "";
+  assert.doesNotMatch(table, /첫 번째 정의/);
+  assert.doesNotMatch(result, /I8/);
+  assert.match(result, /^3\.1 용어$/m);
+  assert.match(result, /^1\\\) 첫 번째 정의가 충분히 길게 이어지는 문장입니다$/m);
+  assert.match(result, /^2\\\) 두 번째 정의도 별도 본문으로 이어집니다$/m);
+  assert.equal((result.match(/실제 표 데이터/g) ?? []).length, 0);
+});
+
 test("일반적인 rowspan 표 셀은 이동하지 않는다", () => {
   const markdown =
     '<table><tr><td rowspan="3">정상 병합 셀</td><td>A</td></tr>' +

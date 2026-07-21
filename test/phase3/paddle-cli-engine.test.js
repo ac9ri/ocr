@@ -33,6 +33,14 @@ test("PP-StructureV3에 한국어·표·문서 보정 옵션을 전달하고 결
             block_bbox: [10, 20, 100, 40],
           },
         ],
+        table_res_list: [
+          {
+            cell_box_list: [
+              [1, 2, 30, 20],
+              [31, 2, 60, 40],
+            ],
+          },
+        ],
         overall_ocr_res: {
           rec_texts: ["구조 분석에 남은 줄"],
           rec_boxes: [[10, 20, 100, 40]],
@@ -93,6 +101,10 @@ test("PP-StructureV3에 한국어·표·문서 보정 옵션을 전달하고 결
       content: "구조 분석에 남은 줄",
       bbox: [10, 20, 100, 40],
     },
+  ]);
+  assert.deepEqual(result.tableCellBoxes, [
+    [1, 2, 30, 20],
+    [31, 2, 60, 40],
   ]);
 });
 

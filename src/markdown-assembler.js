@@ -36,6 +36,7 @@ export async function materializePage(
     rawTextLines: result.rawTextLines,
     fallbackTextLines: result.fallbackTextLines,
     structureBlocks: result.structureBlocks,
+    tableCellBoxes: result.tableCellBoxes,
     rawCoordinateScale: result.rawCoordinateScale,
     fallbackCoordinateScale: result.fallbackCoordinateScale,
   });

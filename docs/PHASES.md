@@ -139,6 +139,7 @@ npm run fixtures:generate
 - Phase 5: <https://github.com/ac9ri/ocr/issues/6>
 - Phase 6: <https://github.com/ac9ri/ocr/issues/7>
 - Phase 7: <https://github.com/ac9ri/ocr/issues/8>
+- Phase 8: <https://github.com/ac9ri/ocr/issues/9>
 
 ## Phase 6 — 비공개 실이미지 강건성 개선
 
@@ -179,6 +180,24 @@ npm run fixtures:generate
 - Phase 6에 남았던 깨짐 pattern 제거 및 Note 중복 없음
 - 워터마크 겹침 24V·48V·60V 일반 문장 회수
 - 페이지 2 번호 1–11 한 번씩 존재, 표 안 인접 본문 누출 없음
+- 상세: [비공개 실이미지 검증](PRIVATE_IMAGE_VALIDATION.md)
+
+## Phase 8 — 표 인접 소제목의 좌표 기반 복구
+
+상태: DONE — 제공된 이미지 1장 범위
+
+- 구조 OCR이 표 옆 본문을 장기 병합셀로 흡수하며 큰 자간 소제목을 손상하는
+  문제 재현
+- Paddle 표 결과의 셀 좌표를 Markdown 후처리 단계까지 전달
+- 비정상 장기 셀 안의 `text-safe` 원문 OCR 박스를 시각 행과 좌→우 순서로 재조립
+- 구조 셀 문자열과의 유사도·길이·번호 수 검증으로 실제 표 데이터 혼입 방지
+
+검증:
+
+- 전체 자동 테스트: 56 pass, 0 fail
+- 비공개 이미지의 기존 OCR sidecar 재조립으로 `3.1` 뒤 한글 소제목 복구
+- 해당 위치의 `I8`/`l8` 오인식 잔존 0건
+- Phase 7 결과와 비교할 때 변경 범위가 표 인접 본문으로 제한됨
 - 상세: [비공개 실이미지 검증](PRIVATE_IMAGE_VALIDATION.md)
 
 ## 실제 문서 골든셋 인수 시험
