@@ -1,6 +1,7 @@
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { renderLayoutBlocks } from "./layout-order.js";
+import { postprocessMarkdown } from "./markdown-postprocessor.js";
 
 function normalizeMarkdown(markdown) {
   return markdown.replaceAll("\r\n", "\n").trim();
@@ -31,6 +32,7 @@ export async function materializePage(
   let markdown = result.markdown
     ? normalizeMarkdown(result.markdown)
     : renderLayoutBlocks(result.blocks ?? []);
+  markdown = postprocessMarkdown(markdown, { rawTextLines: result.rawTextLines });
   const pageAssetDirectory = path.join(
     outputDirectory,
     "assets",

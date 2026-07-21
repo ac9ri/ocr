@@ -8,6 +8,7 @@
 - DOCX 안의 스캔 이미지를 본문 배치 순서대로 추출
 - 중앙 여백 자동 탐색 또는 수동 비율로 좌/우 2쪽 분할
 - 회색 저대비 워터마크 약화
+- 저해상도 워터마크 겹침용 `text-safe` 이진화·확대와 누락 번호 복구
 - PP-StructureV3 기반 layout, 표 구조, 그림, 읽기 순서 인식
 - 한국어·영어·숫자용 `korean_PP-OCRv5_mobile_rec`
 - 병합 셀의 `rowspan`/`colspan`을 HTML table로 보존
@@ -17,6 +18,8 @@
 [Phase 기록](docs/PHASES.md)을 참고하세요.
 [합성 PNG 실제 OCR 검증](docs/REAL_OCR_VALIDATION.md)에는 측정 결과와 알려진
 인식 한계를 기록했습니다.
+[비공개 실이미지 검증](docs/PRIVATE_IMAGE_VALIDATION.md)에는 저장소에 원본을
+추가하지 않고 수행한 Phase 6 결과를 기록했습니다.
 
 개인정보 없는 합성 테스트 PNG/DOCX를 만드는 방법은
 [테스트 fixture 제작 안내](docs/TEST_FIXTURES.md)를 참고하세요.
@@ -55,6 +58,18 @@ npm exec wordscan-ocr -- .\scan.png -o .\output `
   --paddle-python .\.venv-ocr\Scripts\python.exe
 ```
 
+화면 캡처처럼 쪽당 폭이 작고 회색 워터마크가 글자와 겹치는 경우:
+
+```powershell
+npm exec wordscan-ocr -- .\scan.png -o .\output `
+  --watermark text-safe `
+  --paddle-python .\.venv-ocr\Scripts\python.exe
+```
+
+`text-safe`는 무채색 픽셀을 이진화하고 쪽 폭이 1,400px 미만이면 2배 확대한다.
+색상 픽셀은 보존하지만 일반 모드보다 처리 시간이 늘어나므로, 저해상도·회색
+워터마크 겹침 문제가 확인된 이미지에 선택적으로 사용한다.
+
 GPU, 강한 워터마크 억제, 수동 분할 위치를 함께 지정하는 예:
 
 ```powershell
@@ -80,7 +95,7 @@ output/
 ```text
 -o, --output <directory>       출력 디렉터리
     --split-ratio <0..1>       수동 좌/우 분할 위치
-    --watermark <mode>         off|conservative|strong
+    --watermark <mode>         off|conservative|strong|text-safe
     --device <device>          cpu|gpu:0 등
     --paddle-command <path>    PaddleOCR 실행 명령/경로
     --paddle-python <path>     bundled Markdown bridge를 실행할 Python 경로
@@ -113,5 +128,6 @@ npm run test:phase4
 ```
 
 합성 PNG 실제 OCR 검증은 CER 5.93%, 핵심 문구 recall 90.91%로 통과했습니다.
-실문서 품질을 승인하려면 표, 병합 셀, 표 옆 본문, 그림, 서로 다른 농도의
+비공개 실이미지 1장에서는 워터마크 겹침 줄, 괄호형 번호, 표 옆 본문을 추가
+검증했습니다. 전체 실문서 품질을 승인하려면 그림과 서로 다른 표 해상도·농도의
 워터마크가 포함된 익명화 골든셋이 추가로 필요합니다.

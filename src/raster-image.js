@@ -83,4 +83,29 @@ export class RasterImage {
     }
     return new RasterImage(width, height, output);
   }
+
+  scaleNearest(factor) {
+    if (!Number.isInteger(factor) || factor < 1) {
+      throw new WordscanError(
+        "IMAGE_INVALID_SCALE",
+        "이미지 확대 배율은 1 이상의 정수여야 합니다.",
+      );
+    }
+    if (factor === 1) return this.clone();
+
+    const width = this.width * factor;
+    const height = this.height * factor;
+    const output = new Uint8ClampedArray(width * height * 3);
+    for (let y = 0; y < height; y += 1) {
+      const sourceY = Math.floor(y / factor);
+      for (let x = 0; x < width; x += 1) {
+        const sourceOffset = this.offset(Math.floor(x / factor), sourceY);
+        const targetOffset = (y * width + x) * 3;
+        output[targetOffset] = this.data[sourceOffset];
+        output[targetOffset + 1] = this.data[sourceOffset + 1];
+        output[targetOffset + 2] = this.data[sourceOffset + 2];
+      }
+    }
+    return new RasterImage(width, height, output);
+  }
 }

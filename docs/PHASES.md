@@ -137,10 +137,31 @@ npm run fixtures:generate
 - Phase 4: <https://github.com/ac9ri/ocr/issues/4>
 - 실제 문서 골든셋: <https://github.com/ac9ri/ocr/issues/5>
 - Phase 5: <https://github.com/ac9ri/ocr/issues/6>
+- Phase 6: <https://github.com/ac9ri/ocr/issues/7>
 
-## 실제 문서 인수 시험(샘플 수령 후)
+## Phase 6 — 비공개 실이미지 강건성 개선
 
-상태: BLOCKED — 실제 스캔 원본과 정답본 미제공
+상태: DONE — 제공된 이미지 1장 범위
+
+- 원본은 `output/private-validation/`에만 두고 Git 추적 제외 확인
+- `conservative`, `off`, 임계값 후보를 비교해 `text-safe` 모드 추가
+- 저해상도 무채색 픽셀 이진화, 색상 보존, 쪽 폭 1,400px 미만 2배 확대
+- 괄호형 번호를 Markdown에서 literal `)`로 보이도록 escape
+- 표 옆 번호 본문이 긴 병합 셀 또는 병합 셀 옆 일반 셀로 들어간 두 형태 복구
+- PP-Structure Markdown에서 누락된 번호 문단과 Note 줄을 일반 OCR 좌표로 복구
+
+검증:
+
+- 전체 자동 테스트: 50 pass, 0 fail
+- 실제 이미지: 1장 → 2쪽
+- 페이지 2 번호 1–11 존재, 5·7·10 누락 복구, 번호 중복 없음
+- 표 내부의 인접 본문 제거 및 `3)` 괄호 표기 보존
+- 워터마크 겹침 Note/48V/60V 줄 회수
+- 상세: [비공개 실이미지 검증](PRIVATE_IMAGE_VALIDATION.md)
+
+## 실제 문서 골든셋 인수 시험
+
+상태: PARTIAL — 비공개 이미지 1장 검토, 정답본과 나머지 유형 미제공
 
 - 최소 10개 스캔 장(20쪽)
 - 일반 본문, 유선/무선 표, 행/열 병합, 표 옆 본문, 그림을 각각 포함

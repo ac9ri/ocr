@@ -49,6 +49,7 @@ export async function runPipeline({
       command: paddlePython ?? paddleCommand,
       commandArguments: paddlePython ? [PADDLE_BRIDGE_SCRIPT] : [],
       device,
+      rawTextRecovery: watermarkMode === "text-safe",
     });
 
   await mkdir(absoluteOutput, { recursive: true });

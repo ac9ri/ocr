@@ -59,12 +59,44 @@ async function collectAssets(markdown, markdownPath, outputDirectory) {
   return assets;
 }
 
+async function readRawTextLines(files) {
+  const jsonFiles = files
+    .filter((file) => path.extname(file).toLowerCase() === ".json")
+    .sort((left, right) => {
+      const leftRaw = path.basename(left).toLowerCase() === "raw_ocr.json";
+      const rightRaw = path.basename(right).toLowerCase() === "raw_ocr.json";
+      return Number(rightRaw) - Number(leftRaw);
+    });
+  for (const jsonFile of jsonFiles) {
+    let parsed;
+    try {
+      parsed = JSON.parse(await readFile(jsonFile, "utf8"));
+    } catch {
+      continue;
+    }
+    const result = parsed.res ?? parsed;
+    const ocr = result.overall_ocr_res;
+    if (!Array.isArray(ocr?.rec_texts) || !Array.isArray(ocr?.rec_boxes)) continue;
+    return ocr.rec_texts
+      .map((text, index) => ({ text, box: ocr.rec_boxes[index] }))
+      .filter(
+        (line) =>
+          typeof line.text === "string" &&
+          Array.isArray(line.box) &&
+          line.box.length === 4 &&
+          line.box.every(Number.isFinite),
+      );
+  }
+  return [];
+}
+
 export class PaddleCliEngine {
   constructor({
     command = "paddleocr",
     commandArguments = [],
     device = "cpu",
     recognitionModel = "korean_PP-OCRv5_mobile_rec",
+    rawTextRecovery = false,
     timeoutMs = 30 * 60 * 1000,
     runner = runProcess,
   } = {}) {
@@ -72,6 +104,7 @@ export class PaddleCliEngine {
     this.commandArguments = commandArguments;
     this.device = device;
     this.recognitionModel = recognitionModel;
+    this.rawTextRecovery = rawTextRecovery;
     this.timeoutMs = timeoutMs;
     this.runner = runner;
   }
@@ -103,6 +136,8 @@ export class PaddleCliEngine {
       "False",
       "--use_chart_recognition",
       "False",
+      "--save_raw_ocr",
+      String(this.rawTextRecovery),
     ];
   }
 
@@ -131,6 +166,7 @@ export class PaddleCliEngine {
     return {
       markdown,
       assets: await collectAssets(markdown, markdownPath, outputDirectory),
+      rawTextLines: this.rawTextRecovery ? await readRawTextLines(files) : [],
       warnings: processResult.stderr?.trim() ? [processResult.stderr.trim()] : [],
       engine: {
         name: "PP-StructureV3",

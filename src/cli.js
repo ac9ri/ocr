@@ -15,7 +15,7 @@ const HELP = `wordscan-ocr - 2-up Word 스캔 문서를 Markdown으로 변환
 옵션:
   -o, --output <directory>       출력 디렉터리 (기본값: ./output)
       --split-ratio <0..1>       수동 좌/우 분할 위치
-      --watermark <mode>         off|conservative|strong (기본값: conservative)
+      --watermark <mode>         off|conservative|strong|text-safe (기본값: conservative)
       --device <device>          cpu|gpu:0 등 (기본값: cpu)
       --paddle-command <path>    PaddleOCR 실행 명령 (기본값: paddleocr)
       --paddle-python <path>     bundled bridge를 실행할 Python 경로
@@ -68,10 +68,10 @@ export function parseCliArguments(argv) {
       index += 1;
     } else if (argument === "--watermark") {
       options.watermarkMode = requiredValue(argv, index, argument);
-      if (!["off", "conservative", "strong"].includes(options.watermarkMode)) {
+      if (!["off", "conservative", "strong", "text-safe"].includes(options.watermarkMode)) {
         throw new WordscanError(
           "CLI_INVALID_WATERMARK_MODE",
-          "--watermark는 off, conservative, strong 중 하나여야 합니다.",
+          "--watermark는 off, conservative, strong, text-safe 중 하나여야 합니다.",
         );
       }
       index += 1;

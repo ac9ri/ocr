@@ -14,6 +14,12 @@ const PRESETS = {
     chromaTolerance: 30,
     strength: 1,
   },
+  "text-safe": {
+    binarizeThreshold: 150,
+    chromaTolerance: 18,
+    upscaleBelowWidth: 1_400,
+    upscaleFactor: 2,
+  },
 };
 
 function clamp01(value) {
@@ -41,6 +47,27 @@ export class WatermarkSuppressor {
     const output = image.clone();
     if (this.settings === null) {
       return output;
+    }
+
+    if (this.settings.binarizeThreshold !== undefined) {
+      const { binarizeThreshold, chromaTolerance, upscaleBelowWidth, upscaleFactor } =
+        this.settings;
+      for (let offset = 0; offset < output.data.length; offset += 3) {
+        const red = output.data[offset];
+        const green = output.data[offset + 1];
+        const blue = output.data[offset + 2];
+        if (Math.max(red, green, blue) - Math.min(red, green, blue) > chromaTolerance) {
+          continue;
+        }
+        const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+        const value = luminance <= binarizeThreshold ? 0 : 255;
+        output.data[offset] = value;
+        output.data[offset + 1] = value;
+        output.data[offset + 2] = value;
+      }
+      return output.width < upscaleBelowWidth
+        ? output.scaleNearest(upscaleFactor)
+        : output;
     }
 
     const {

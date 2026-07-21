@@ -35,3 +35,19 @@ test("strong 모드는 conservative보다 중간 회색을 더 약화한다", ()
   const strong = new WatermarkSuppressor({ mode: "strong" }).apply(image);
   assert.ok(strong.rgbAt(0, 0)[0] > conservative.rgbAt(0, 0)[0]);
 });
+
+test("text-safe 모드는 저해상도 중성 픽셀을 이진화·확대하고 색상은 보존한다", () => {
+  const image = RasterImage.solid(3, 1);
+  image.setRgb(0, 0, 90);
+  image.setRgb(1, 0, 190);
+  image.setRgb(2, 0, 190, 100, 100);
+
+  const result = new WatermarkSuppressor({ mode: "text-safe" }).apply(image);
+
+  assert.equal(result.width, 6);
+  assert.equal(result.height, 2);
+  assert.deepEqual(result.rgbAt(0, 0), [0, 0, 0]);
+  assert.deepEqual(result.rgbAt(2, 0), [255, 255, 255]);
+  assert.deepEqual(result.rgbAt(4, 0), [190, 100, 100]);
+  assert.deepEqual(result.rgbAt(5, 1), [190, 100, 100]);
+});

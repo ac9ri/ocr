@@ -61,6 +61,11 @@ test("CLI 성공 시 결과 경로와 진행 상황을 출력한다", async () =
   assert.equal(stderr.value(), "");
 });
 
+test("CLI는 워터마크 겹침용 text-safe 모드를 허용한다", () => {
+  const options = parseCliArguments(["scan.png", "--watermark", "text-safe"]);
+  assert.equal(options.watermarkMode, "text-safe");
+});
+
 test("입력 누락과 잘못된 옵션은 0이 아닌 종료 코드를 반환한다", async () => {
   const noInputError = stringWriter();
   assert.equal(await runCli([], { stdout: stringWriter(), stderr: noInputError }), 2);

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import gc
+import json
 from pathlib import Path
 
-from paddleocr import PPStructureV3
+from paddleocr import PaddleOCR, PPStructureV3
 
 
 def parse_bool(value: str) -> bool:
@@ -35,13 +37,42 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--use_formula_recognition", type=parse_bool, default=False)
     parser.add_argument("--use_seal_recognition", type=parse_bool, default=False)
     parser.add_argument("--use_chart_recognition", type=parse_bool, default=False)
+    parser.add_argument("--save_raw_ocr", type=parse_bool, default=False)
     return parser
+
+
+def save_raw_ocr(args: argparse.Namespace, output_directory: Path) -> None:
+    ocr = PaddleOCR(
+        device=args.device,
+        text_recognition_model_name=args.text_recognition_model_name,
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
+    )
+    rec_texts = []
+    rec_boxes = []
+    for result in ocr.predict(args.input):
+        data = result.json.get("res", result.json)
+        rec_texts.extend(data.get("rec_texts", []))
+        rec_boxes.extend(data.get("rec_boxes", []))
+    with (output_directory / "raw_ocr.json").open("w", encoding="utf-8") as stream:
+        json.dump(
+            {"overall_ocr_res": {"rec_texts": rec_texts, "rec_boxes": rec_boxes}},
+            stream,
+            ensure_ascii=False,
+            indent=2,
+        )
+    del ocr
+    gc.collect()
 
 
 def main() -> None:
     args = build_parser().parse_args()
     output_directory = Path(args.save_path)
     output_directory.mkdir(parents=True, exist_ok=True)
+
+    if args.save_raw_ocr:
+        save_raw_ocr(args, output_directory)
 
     pipeline = PPStructureV3(
         device=args.device,
@@ -60,6 +91,7 @@ def main() -> None:
     )
     for result in results:
         result.save_to_markdown(output_directory)
+        result.save_to_json(output_directory)
 
 
 if __name__ == "__main__":
