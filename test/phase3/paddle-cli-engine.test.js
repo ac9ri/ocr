@@ -26,6 +26,13 @@ test("PP-StructureV3에 한국어·표·문서 보정 옵션을 전달하고 결
     await writeFile(
       path.join(outputDirectory, "page_res.json"),
       JSON.stringify({
+        parsing_res_list: [
+          {
+            block_label: "text",
+            block_content: "구조 분석에 남은 줄",
+            block_bbox: [10, 20, 100, 40],
+          },
+        ],
         overall_ocr_res: {
           rec_texts: ["구조 분석에 남은 줄"],
           rec_boxes: [[10, 20, 100, 40]],
@@ -38,6 +45,12 @@ test("PP-StructureV3에 한국어·표·문서 보정 옵션을 전달하고 결
         overall_ocr_res: {
           rec_texts: ["1) 첫 줄"],
           rec_boxes: [[10, 20, 100, 40]],
+          rec_scores: [0.98],
+        },
+        fallback_ocr_res: {
+          rec_texts: ["1) 첫 줄 보존형"],
+          rec_boxes: [[5, 10, 50, 20]],
+          rec_scores: [0.96],
         },
       }),
     );
@@ -48,7 +61,8 @@ test("PP-StructureV3에 한국어·표·문서 보정 옵션을 전달하고 결
     device: "gpu:0",
     rawTextRecovery: true,
   });
-  const result = await engine.recognize(inputPath, outputDirectory);
+  const rawInputPath = path.join(root, "raw-page.png");
+  const result = await engine.recognize(inputPath, outputDirectory, { rawInputPath });
 
   assert.equal(invocation.command, "paddleocr");
   assert.ok(invocation.args.includes("pp_structurev3"));
@@ -59,12 +73,26 @@ test("PP-StructureV3에 한국어·표·문서 보정 옵션을 전달하고 결
   assert.equal(invocation.args[invocation.args.indexOf("--device") + 1], "gpu:0");
   assert.equal(invocation.args[invocation.args.indexOf("--use_table_recognition") + 1], "True");
   assert.equal(invocation.args[invocation.args.indexOf("--save_raw_ocr") + 1], "true");
+  assert.equal(
+    invocation.args[invocation.args.indexOf("--raw_ocr_input") + 1],
+    rawInputPath,
+  );
   assert.match(result.markdown, /rowspan="2"/);
   assert.match(result.markdown, /colspan="2"/);
   assert.equal(result.assets.length, 1);
   assert.equal(result.assets[0].reference, "imgs/figure.png");
   assert.deepEqual(result.rawTextLines, [
-    { text: "1) 첫 줄", box: [10, 20, 100, 40] },
+    { text: "1) 첫 줄", box: [10, 20, 100, 40], score: 0.98 },
+  ]);
+  assert.deepEqual(result.fallbackTextLines, [
+    { text: "1) 첫 줄 보존형", box: [5, 10, 50, 20], score: 0.96 },
+  ]);
+  assert.deepEqual(result.structureBlocks, [
+    {
+      label: "text",
+      content: "구조 분석에 남은 줄",
+      bbox: [10, 20, 100, 40],
+    },
   ]);
 });
 

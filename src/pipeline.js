@@ -26,7 +26,7 @@ export async function runPipeline({
   inputPath,
   outputDirectory,
   splitRatio = null,
-  watermarkMode = "conservative",
+  watermarkMode = "text-safe",
   device = "cpu",
   paddleCommand = "paddleocr",
   paddlePython = null,
@@ -43,6 +43,11 @@ export async function runPipeline({
     dependencies.splitter ?? new TwoUpPageSplitter({ splitRatio });
   const suppressor =
     dependencies.suppressor ?? new WatermarkSuppressor({ mode: watermarkMode });
+  const structureSuppressor =
+    dependencies.structureSuppressor ??
+    (watermarkMode === "text-safe"
+      ? new WatermarkSuppressor({ mode: "conservative" })
+      : suppressor);
   const engine =
     dependencies.engine ??
     new PaddleCliEngine({
@@ -80,11 +85,25 @@ export async function runPipeline({
         );
         const ocrOutputDirectory = path.join(pageWorkDirectory, "ocr");
         await mkdir(ocrOutputDirectory, { recursive: true });
-        const preprocessed = suppressor.apply(split.pages[sideIndex]);
+        const page = split.pages[sideIndex];
+        const preprocessed = structureSuppressor.apply(page);
+        const recoveryImage = watermarkMode === "text-safe" ? suppressor.apply(page) : null;
         const pageInputPath = path.join(pageWorkDirectory, "input.png");
         await writeFile(pageInputPath, await codec.encodePng(preprocessed));
+        const rawInputPath = recoveryImage
+          ? path.join(pageWorkDirectory, "raw-input.png")
+          : pageInputPath;
+        if (recoveryImage) {
+          await writeFile(rawInputPath, await codec.encodePng(recoveryImage));
+        }
 
-        const recognized = await engine.recognize(pageInputPath, ocrOutputDirectory);
+        const recognized = await engine.recognize(pageInputPath, ocrOutputDirectory, {
+          rawInputPath,
+        });
+        recognized.rawCoordinateScale = recoveryImage
+          ? recoveryImage.width / preprocessed.width
+          : 1;
+        recognized.fallbackCoordinateScale = 1;
         const materialized = await materializePage(
           recognized,
           pageNumber,
@@ -98,6 +117,9 @@ export async function runPipeline({
           sourceImage: sources[sheetIndex].name,
           sourceSize: { width: raster.width, height: raster.height },
           pageSize: { width: preprocessed.width, height: preprocessed.height },
+          recoveryPageSize: recoveryImage
+            ? { width: recoveryImage.width, height: recoveryImage.height }
+            : null,
           splitColumn: split.splitColumn,
           assets: materialized.assets,
           warnings: materialized.warnings,

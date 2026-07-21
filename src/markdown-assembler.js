@@ -32,7 +32,13 @@ export async function materializePage(
   let markdown = result.markdown
     ? normalizeMarkdown(result.markdown)
     : renderLayoutBlocks(result.blocks ?? []);
-  markdown = postprocessMarkdown(markdown, { rawTextLines: result.rawTextLines });
+  markdown = postprocessMarkdown(markdown, {
+    rawTextLines: result.rawTextLines,
+    fallbackTextLines: result.fallbackTextLines,
+    structureBlocks: result.structureBlocks,
+    rawCoordinateScale: result.rawCoordinateScale,
+    fallbackCoordinateScale: result.fallbackCoordinateScale,
+  });
   const pageAssetDirectory = path.join(
     outputDirectory,
     "assets",

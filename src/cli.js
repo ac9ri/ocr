@@ -15,7 +15,7 @@ const HELP = `wordscan-ocr - 2-up Word 스캔 문서를 Markdown으로 변환
 옵션:
   -o, --output <directory>       출력 디렉터리 (기본값: ./output)
       --split-ratio <0..1>       수동 좌/우 분할 위치
-      --watermark <mode>         off|conservative|strong|text-safe (기본값: conservative)
+      --watermark <mode>         off|conservative|strong|text-safe (기본값: text-safe)
       --device <device>          cpu|gpu:0 등 (기본값: cpu)
       --paddle-command <path>    PaddleOCR 실행 명령 (기본값: paddleocr)
       --paddle-python <path>     bundled bridge를 실행할 Python 경로
@@ -37,7 +37,7 @@ export function parseCliArguments(argv) {
     inputPath: null,
     outputDirectory: path.resolve("output"),
     splitRatio: null,
-    watermarkMode: "conservative",
+    watermarkMode: "text-safe",
     device: "cpu",
     paddleCommand: "paddleocr",
     paddlePython: null,

@@ -84,3 +84,76 @@ test("구조 Markdown에서 빠진 Note 줄을 다음 인식 줄 앞에 복구�
   assert.match(result, /※ Note\.24 V 전원/);
   assert.ok(result.indexOf("※ Note") < result.indexOf("48 V"));
 });
+
+test("같은 좌표의 깨진 일반 문장을 확대 OCR 문장으로 교체한다", () => {
+  const markdown = "앞 문단\n\n|&ㅋ ㄷ()|| 극 <7(S\n\n뒤 문단";
+  const rawTextLines = [
+    {
+      text: "5) 워터마크와 겹쳐도 복구되어야 하는 일반 문장",
+      box: [200, 400, 1_600, 480],
+    },
+  ];
+  const structureBlocks = [
+    {
+      label: "text",
+      content: "|&ㅋ ㄷ()|| 극 <7(S",
+      bbox: [90, 190, 810, 250],
+    },
+  ];
+
+  const result = postprocessMarkdown(markdown, {
+    rawTextLines,
+    structureBlocks,
+    rawCoordinateScale: 2,
+  });
+
+  assert.doesNotMatch(result, /\|&ㅋ/);
+  assert.match(result, /^5\\\) 워터마크와 겹쳐도 복구/m);
+});
+
+test("표 block은 일반 텍스트 교체 대상에서 제외한다", () => {
+  const markdown = "<table><tr><td>표 원문</td></tr></table>";
+  const result = postprocessMarkdown(markdown, {
+    rawTextLines: [{ text: "중복 표 텍스트", box: [10, 10, 100, 30] }],
+    structureBlocks: [
+      { label: "table", content: markdown, bbox: [0, 0, 120, 40] },
+    ],
+  });
+  assert.equal(result, markdown);
+});
+
+test("두 OCR 문장이 거의 같으면 보존형 후보로 이진화 문자 오류를 교정한다", () => {
+  const markdown = "aT---";
+  const structureBlocks = [
+    { label: "text", content: "aT---", bbox: [100, 100, 900, 150] },
+  ];
+  const result = postprocessMarkdown(markdown, {
+    rawTextLines: [
+      { text: "50V 초과 고전압을 사용하는 부품", box: [200, 200, 1_600, 280] },
+    ],
+    fallbackTextLines: [
+      { text: "60V 초과 고전압을 사유하는 부품", box: [100, 100, 800, 140] },
+    ],
+    structureBlocks,
+    rawCoordinateScale: 2,
+  });
+
+  assert.equal(result, "60V 초과 고전압을 사용하는 부품");
+});
+
+test("정상 구조 문장은 보조 OCR 오타로 덮어쓰지 않는다", () => {
+  const markdown = "6) 전원 Of 상태이며 외부와 통신이 연결된 상태";
+  const result = postprocessMarkdown(markdown, {
+    rawTextLines: [
+      { text: "6) 전원 Off 상태이며 외부와 통신이 면결된 상태", box: [100, 100, 800, 140] },
+    ],
+    fallbackTextLines: [
+      { text: "6) 전원 Off 상태이며 외부와 통신이 연결된 상태", box: [100, 100, 800, 140] },
+    ],
+    structureBlocks: [
+      { label: "text", content: markdown, bbox: [100, 100, 800, 140] },
+    ],
+  });
+
+  assert.equal(result, "6\\) 전원 Off 상태이며 외부와 통신이 연결된 상태");
+});

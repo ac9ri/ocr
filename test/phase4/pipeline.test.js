@@ -25,11 +25,16 @@ class FakeEngine {
   constructor({ fail = false } = {}) {
     this.calls = 0;
     this.fail = fail;
+    this.inputs = [];
   }
 
-  async recognize(_inputPath, outputDirectory) {
+  async recognize(inputPath, outputDirectory, { rawInputPath = inputPath } = {}) {
     this.calls += 1;
     if (this.fail) throw new Error("fake OCR failure");
+    this.inputs.push({
+      structure: await readFile(inputPath, "utf8"),
+      recovery: await readFile(rawInputPath, "utf8"),
+    });
     await mkdir(outputDirectory, { recursive: true });
     const assetPath = path.join(outputDirectory, `figure-${this.calls}.png`);
     await writeFile(assetPath, `asset-${this.calls}`);
@@ -76,6 +81,32 @@ test("한 장의 2-up 입력을 두 페이지 Markdown/manifest로 만든다", a
     (await readdir(outputDirectory)).some((name) => name.startsWith(".wordscan-work-")),
     false,
   );
+});
+
+test("text-safe는 구조용 보존 이미지와 2배 복구 이미지를 분리한다", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wordscan-dual-input-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const inputPath = path.join(root, "scan.png");
+  const outputDirectory = path.join(root, "result");
+  await writeFile(inputPath, "scan");
+  const engine = new FakeEngine();
+
+  const result = await runPipeline({
+    inputPath,
+    outputDirectory,
+    watermarkMode: "text-safe",
+    dependencies: { codec: new FakeCodec(), engine },
+  });
+
+  assert.deepEqual(engine.inputs[0], {
+    structure: "100x80",
+    recovery: "200x160",
+  });
+  assert.deepEqual(result.manifest.pages[0].pageSize, { width: 100, height: 80 });
+  assert.deepEqual(result.manifest.pages[0].recoveryPageSize, {
+    width: 200,
+    height: 160,
+  });
 });
 
 test("실패해도 기본 설정에서는 작업 디렉터리를 정리한다", async (context) => {

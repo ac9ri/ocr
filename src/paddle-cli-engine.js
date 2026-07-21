@@ -59,7 +59,24 @@ async function collectAssets(markdown, markdownPath, outputDirectory) {
   return assets;
 }
 
-async function readRawTextLines(files) {
+function textLines(ocr) {
+  if (!Array.isArray(ocr?.rec_texts) || !Array.isArray(ocr?.rec_boxes)) return [];
+  return ocr.rec_texts
+    .map((text, index) => ({
+      text,
+      box: ocr.rec_boxes[index],
+      score: ocr.rec_scores?.[index] ?? null,
+    }))
+    .filter(
+      (line) =>
+        typeof line.text === "string" &&
+        Array.isArray(line.box) &&
+        line.box.length === 4 &&
+        line.box.every(Number.isFinite),
+    );
+}
+
+async function readRawTextData(files) {
   const jsonFiles = files
     .filter((file) => path.extname(file).toLowerCase() === ".json")
     .sort((left, right) => {
@@ -76,18 +93,43 @@ async function readRawTextLines(files) {
     }
     const result = parsed.res ?? parsed;
     const ocr = result.overall_ocr_res;
-    if (!Array.isArray(ocr?.rec_texts) || !Array.isArray(ocr?.rec_boxes)) continue;
-    return ocr.rec_texts
-      .map((text, index) => ({ text, box: ocr.rec_boxes[index] }))
-      .filter(
-        (line) =>
-          typeof line.text === "string" &&
-          Array.isArray(line.box) &&
-          line.box.length === 4 &&
-          line.box.every(Number.isFinite),
-      );
+    const rawTextLines = textLines(ocr);
+    if (rawTextLines.length === 0) continue;
+    return {
+      rawTextLines,
+      fallbackTextLines: textLines(result.fallback_ocr_res),
+    };
   }
-  return [];
+  return { rawTextLines: [], fallbackTextLines: [] };
+}
+
+async function readStructureBlocks(files) {
+  const structureFile = files.find(
+    (file) => path.basename(file).toLowerCase() !== "raw_ocr.json" &&
+      path.extname(file).toLowerCase() === ".json",
+  );
+  if (!structureFile) return [];
+  try {
+    const parsed = JSON.parse(await readFile(structureFile, "utf8"));
+    const result = parsed.res ?? parsed;
+    if (!Array.isArray(result.parsing_res_list)) return [];
+    return result.parsing_res_list
+      .map((block) => ({
+        label: block.block_label,
+        content: block.block_content,
+        bbox: block.block_bbox,
+      }))
+      .filter(
+        (block) =>
+          typeof block.label === "string" &&
+          typeof block.content === "string" &&
+          Array.isArray(block.bbox) &&
+          block.bbox.length === 4 &&
+          block.bbox.every(Number.isFinite),
+      );
+  } catch {
+    return [];
+  }
 }
 
 export class PaddleCliEngine {
@@ -109,8 +151,8 @@ export class PaddleCliEngine {
     this.runner = runner;
   }
 
-  buildArguments(inputPath, outputDirectory) {
-    return [
+  buildArguments(inputPath, outputDirectory, rawInputPath = inputPath) {
+    const args = [
       "pp_structurev3",
       "-i",
       inputPath,
@@ -139,12 +181,16 @@ export class PaddleCliEngine {
       "--save_raw_ocr",
       String(this.rawTextRecovery),
     ];
+    if (this.rawTextRecovery) {
+      args.push("--raw_ocr_input", rawInputPath);
+    }
+    return args;
   }
 
-  async recognize(inputPath, outputDirectory) {
+  async recognize(inputPath, outputDirectory, { rawInputPath = inputPath } = {}) {
     const args = [
       ...this.commandArguments,
-      ...this.buildArguments(inputPath, outputDirectory),
+      ...this.buildArguments(inputPath, outputDirectory, rawInputPath),
     ];
     const processResult = await this.runner(this.command, args, {
       cwd: outputDirectory,
@@ -163,10 +209,14 @@ export class PaddleCliEngine {
 
     const markdownPath = markdownFiles[0];
     const markdown = await readFile(markdownPath, "utf8");
+    const rawTextData = this.rawTextRecovery
+      ? await readRawTextData(files)
+      : { rawTextLines: [], fallbackTextLines: [] };
     return {
       markdown,
       assets: await collectAssets(markdown, markdownPath, outputDirectory),
-      rawTextLines: this.rawTextRecovery ? await readRawTextLines(files) : [],
+      ...rawTextData,
+      structureBlocks: this.rawTextRecovery ? await readStructureBlocks(files) : [],
       warnings: processResult.stderr?.trim() ? [processResult.stderr.trim()] : [],
       engine: {
         name: "PP-StructureV3",

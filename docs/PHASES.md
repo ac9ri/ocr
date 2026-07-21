@@ -138,6 +138,7 @@ npm run fixtures:generate
 - 실제 문서 골든셋: <https://github.com/ac9ri/ocr/issues/5>
 - Phase 5: <https://github.com/ac9ri/ocr/issues/6>
 - Phase 6: <https://github.com/ac9ri/ocr/issues/7>
+- Phase 7: <https://github.com/ac9ri/ocr/issues/8>
 
 ## Phase 6 — 비공개 실이미지 강건성 개선
 
@@ -157,6 +158,27 @@ npm run fixtures:generate
 - 페이지 2 번호 1–11 존재, 5·7·10 누락 복구, 번호 중복 없음
 - 표 내부의 인접 본문 제거 및 `3)` 괄호 표기 보존
 - 워터마크 겹침 Note/48V/60V 줄 회수
+- 상세: [비공개 실이미지 검증](PRIVATE_IMAGE_VALIDATION.md)
+
+## Phase 7 — 워터마크 겹침 일반 문장 재복구
+
+상태: DONE — 제공된 이미지 1장 범위
+
+- Phase 6의 특정 문구 존재 여부 검증이 일반 문장 깨짐을 놓친 문제 재현
+- 표·그림 구조용 `conservative` 입력과 텍스트 복구용 `text-safe` 입력 분리
+- 이진화/보존형 일반 OCR을 함께 실행하고 문장 anchor로 좌표 정렬
+- 짧게 깨진 block, 번호 시작이 사라진 block, Note block만 제한적으로 교체
+- 유사 문장 사이의 짧은 수치+단위 및 공통 영문 토큰만 보수적으로 교정
+- 기본 watermark mode를 `text-safe`로 변경
+
+검증:
+
+- 전체 자동 테스트: 55 pass, 0 fail
+- 옵션을 생략한 실제 이미지 실행에서 `text-safe` 적용 확인
+- 구조 이미지 `960×1080`, 복구 이미지 `1920×2160` 분리 확인
+- Phase 6에 남았던 깨짐 pattern 제거 및 Note 중복 없음
+- 워터마크 겹침 24V·48V·60V 일반 문장 회수
+- 페이지 2 번호 1–11 한 번씩 존재, 표 안 인접 본문 누출 없음
 - 상세: [비공개 실이미지 검증](PRIVATE_IMAGE_VALIDATION.md)
 
 ## 실제 문서 골든셋 인수 시험

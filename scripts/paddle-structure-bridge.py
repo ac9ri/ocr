@@ -38,6 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--use_seal_recognition", type=parse_bool, default=False)
     parser.add_argument("--use_chart_recognition", type=parse_bool, default=False)
     parser.add_argument("--save_raw_ocr", type=parse_bool, default=False)
+    parser.add_argument("--raw_ocr_input")
     return parser
 
 
@@ -49,15 +50,33 @@ def save_raw_ocr(args: argparse.Namespace, output_directory: Path) -> None:
         use_doc_unwarping=False,
         use_textline_orientation=False,
     )
-    rec_texts = []
-    rec_boxes = []
-    for result in ocr.predict(args.input):
-        data = result.json.get("res", result.json)
-        rec_texts.extend(data.get("rec_texts", []))
-        rec_boxes.extend(data.get("rec_boxes", []))
+    def recognize(image_path: str) -> dict:
+        rec_texts = []
+        rec_boxes = []
+        rec_scores = []
+        for result in ocr.predict(image_path):
+            data = result.json.get("res", result.json)
+            rec_texts.extend(data.get("rec_texts", []))
+            rec_boxes.extend(data.get("rec_boxes", []))
+            rec_scores.extend(data.get("rec_scores", []))
+        return {
+            "rec_texts": rec_texts,
+            "rec_boxes": rec_boxes,
+            "rec_scores": rec_scores,
+        }
+
+    primary = recognize(args.raw_ocr_input or args.input)
+    fallback = (
+        recognize(args.input)
+        if args.raw_ocr_input and args.raw_ocr_input != args.input
+        else {"rec_texts": [], "rec_boxes": [], "rec_scores": []}
+    )
     with (output_directory / "raw_ocr.json").open("w", encoding="utf-8") as stream:
         json.dump(
-            {"overall_ocr_res": {"rec_texts": rec_texts, "rec_boxes": rec_boxes}},
+            {
+                "overall_ocr_res": primary,
+                "fallback_ocr_res": fallback,
+            },
             stream,
             ensure_ascii=False,
             indent=2,

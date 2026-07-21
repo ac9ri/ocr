@@ -90,3 +90,13 @@ URL: <https://github.com/ac9ri/ocr/issues/7>
 - 괄호형 번호 표시와 누락 번호 문단 복구
 - 표 옆 본문이 표 셀로 흡수되는 두 형태 후처리
 - 비공개 이미지 로컬 검증 및 공개 가능한 결과만 문서화
+
+## Issue 8 — [Phase 7] 워터마크 겹침 일반 문장 복구 개선
+
+URL: <https://github.com/ac9ri/ocr/issues/8>
+
+- Phase 6의 좁은 존재 여부 검증으로 놓친 일반 문장 깨짐 재현
+- 구조 OCR과 이진화/보존형 일반 OCR 입력 분리
+- 문장 anchor 기반 좌표 정렬과 깨진 block 제한 교체
+- 정상 구조 문장과 표 block의 덮어쓰기 방지
+- 기본 `text-safe` 실행 및 비공개 이미지 E2E 검증

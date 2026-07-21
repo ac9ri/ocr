@@ -55,7 +55,7 @@ test("CLI 성공 시 결과 경로와 진행 상황을 출력한다", async () =
     },
   });
   assert.equal(exitCode, 0);
-  assert.equal(received.watermarkMode, "conservative");
+  assert.equal(received.watermarkMode, "text-safe");
   assert.match(stdout.value(), /페이지 1 완료/);
   assert.match(stdout.value(), /out\/scan\.md/);
   assert.equal(stderr.value(), "");
