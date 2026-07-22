@@ -58,6 +58,17 @@ npm exec wordscan-ocr -- .\scan.png -o .\output `
   --paddle-python .\.venv-ocr\Scripts\python.exe
 ```
 
+폴더 바로 아래의 지원 이미지를 모두 처리하는 경우:
+
+```powershell
+npm exec wordscan-ocr -- .\input-images -o .\output-batch `
+  --paddle-python .\.venv-ocr\Scripts\python.exe
+```
+
+폴더 입력은 하위 폴더를 재귀 탐색하지 않는다. PNG, JPEG, WebP, TIFF, BMP를
+파일명 순서로 처리하며, 한 이미지가 실패해도 나머지 이미지는 계속 처리한다.
+일부 실패가 있으면 요약 파일은 생성하고 CLI 종료 코드는 `1`을 반환한다.
+
 기본 실행은 정확도 우선 `text-safe` 모드를 사용한다:
 
 ```powershell
@@ -90,6 +101,25 @@ output/
     ├── page-0001/
     └── page-0002/
 ```
+
+폴더 입력 출력:
+
+```text
+output-batch/
+├── image-01/
+│   ├── image-01.md
+│   ├── image-01.manifest.json
+│   └── assets/
+├── image-02/
+│   ├── image-02.md
+│   ├── image-02.manifest.json
+│   └── assets/
+├── batch-summary.md
+└── batch-summary.json
+```
+
+기본 이름이 같은 이미지가 여러 개면 확장자를 붙인 출력 폴더를 사용한다.
+예를 들어 `scan.png`와 `scan.jpg`는 각각 `scan-png`, `scan-jpg`에 저장된다.
 
 ## 옵션
 
@@ -126,6 +156,7 @@ npm run test:phase1
 npm run test:phase2
 npm run test:phase3
 npm run test:phase4
+npm run test:phase9
 ```
 
 합성 PNG 실제 OCR 검증은 CER 5.93%, 핵심 문구 recall 90.91%로 통과했습니다.

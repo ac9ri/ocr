@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 import path from "node:path";
+import { stat } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
-import { WordscanError } from "./errors.js";
+import { runBatch } from "./batch-runner.js";
+import { WordscanError, asWordscanError } from "./errors.js";
 import { runPipeline } from "./pipeline.js";
 
 const VERSION = "0.1.0";
@@ -10,7 +12,9 @@ const VERSION = "0.1.0";
 const HELP = `wordscan-ocr - 2-up Word 스캔 문서를 Markdown으로 변환
 
 사용법:
-  wordscan-ocr <input.docx|image> [options]
+  wordscan-ocr <input.docx|image|directory> [options]
+
+  directory는 바로 아래의 지원 이미지 파일을 이름순으로 일괄 처리합니다.
 
 옵션:
   -o, --output <directory>       출력 디렉터리 (기본값: ./output)
@@ -91,23 +95,56 @@ export function parseCliArguments(argv) {
     } else if (options.inputPath === null) {
       options.inputPath = path.resolve(argument);
     } else {
-      throw new WordscanError("CLI_TOO_MANY_INPUTS", "입력 파일은 하나만 지정할 수 있습니다.");
+      throw new WordscanError(
+        "CLI_TOO_MANY_INPUTS",
+        "입력 파일 또는 폴더는 하나만 지정할 수 있습니다.",
+      );
     }
   }
   return options;
 }
 
 function progressLine(event) {
+  const prefix = event.batchFileNumber
+    ? `[파일 ${event.batchFileNumber}/${event.batchFileCount}] `
+    : "";
   switch (event.type) {
+    case "batch:start":
+      return `폴더 입력 확인: 이미지 ${event.fileCount}개`;
+    case "batch:file:start":
+      return `파일 ${event.fileNumber}/${event.fileCount} 처리 중: ${path.basename(event.inputPath)}`;
+    case "batch:file:complete":
+      return `파일 ${event.fileNumber}/${event.fileCount} 완료: ${path.basename(event.inputPath)}`;
+    case "batch:file:error":
+      return `파일 ${event.fileNumber}/${event.fileCount} 실패: ${path.basename(event.inputPath)} (${event.error.code})`;
     case "input:complete":
-      return `입력 확인: ${event.sheetCount}장`;
+      return `${prefix}입력 확인: ${event.sheetCount}장`;
     case "page:start":
-      return `페이지 ${event.pageNumber} OCR 처리 중 (${event.side})`;
+      return `${prefix}페이지 ${event.pageNumber} OCR 처리 중 (${event.side})`;
     case "page:complete":
-      return `페이지 ${event.pageNumber} 완료 (그림 ${event.assetCount}개)`;
+      return `${prefix}페이지 ${event.pageNumber} 완료 (그림 ${event.assetCount}개)`;
     default:
       return null;
   }
+}
+
+export async function inspectInput(inputPath) {
+  let inputStat;
+  try {
+    inputStat = await stat(inputPath);
+  } catch (error) {
+    throw asWordscanError(
+      error,
+      "INPUT_READ_FAILED",
+      `입력 파일 또는 폴더를 읽을 수 없습니다: ${inputPath}`,
+    );
+  }
+  if (inputStat.isDirectory()) return "directory";
+  if (inputStat.isFile()) return "file";
+  throw new WordscanError(
+    "INPUT_UNSUPPORTED_TYPE",
+    `일반 파일 또는 폴더만 입력할 수 있습니다: ${inputPath}`,
+  );
 }
 
 function diagnosticTail(error, limit = 4_000) {
@@ -121,6 +158,8 @@ export async function runCli(
   argv,
   {
     pipeline = runPipeline,
+    batch = runBatch,
+    inspectInput: inspect = inspectInput,
     stdout = process.stdout,
     stderr = process.stderr,
   } = {},
@@ -136,8 +175,33 @@ export async function runCli(
       return 0;
     }
     if (!options.inputPath) {
-      stderr.write(`입력 파일이 필요합니다.\n\n${HELP}`);
+      stderr.write(`입력 파일 또는 폴더가 필요합니다.\n\n${HELP}`);
       return 2;
+    }
+
+    const inputKind = await inspect(options.inputPath);
+    if (inputKind === "directory") {
+      const result = await batch({
+        ...options,
+        dependencies: { pipeline },
+        onProgress(event) {
+          const line = progressLine(event);
+          if (!line) return;
+          const writer = event.type === "batch:file:error" ? stderr : stdout;
+          writer.write(`${line}\n`);
+        },
+      });
+      const totals = result.summary.totals;
+      stdout.write(
+        `일괄 처리: 전체 ${totals.discovered}, 성공 ${totals.succeeded}, 실패 ${totals.failed}\n`,
+      );
+      stdout.write(`요약 Markdown: ${result.summaryMarkdownPath}\n`);
+      stdout.write(`요약 JSON: ${result.summaryJsonPath}\n`);
+      if (result.hasFailures) {
+        stderr.write("[BATCH_PARTIAL_FAILURE] 일부 이미지 처리에 실패했습니다.\n");
+        return 1;
+      }
+      return 0;
     }
 
     const result = await pipeline({

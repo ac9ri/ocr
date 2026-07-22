@@ -5,7 +5,7 @@ import { ZipArchive } from "./zip-archive.js";
 
 const DOCUMENT_XML = "word/document.xml";
 const DOCUMENT_RELS = "word/_rels/document.xml.rels";
-const IMAGE_EXTENSIONS = new Set([
+export const IMAGE_EXTENSIONS = new Set([
   ".png",
   ".jpg",
   ".jpeg",

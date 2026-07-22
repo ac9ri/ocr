@@ -109,3 +109,13 @@ URL: <https://github.com/ac9ri/ocr/issues/9>
 - 표 셀 좌표와 `text-safe` 원문 OCR 박스를 이용한 시각 행 재조립
 - 같은 행의 분리 단어를 좌→우 순서로 결합
 - 실제 표 데이터 혼입 방지 회귀 테스트와 비공개 이미지 재검증
+
+## Issue 10 — [Phase 9] 이미지 폴더 일괄 처리 및 전체 요약
+
+URL: <https://github.com/ac9ri/ocr/issues/10>
+
+- 지원 이미지의 비재귀·이름순 폴더 탐색
+- 이미지별 독립 출력과 같은 기본 이름 충돌 방지
+- 개별 실패 후 계속 처리 및 실패 종료 코드
+- `batch-summary.md`/`batch-summary.json` 전체 결과 생성
+- 기존 단일 파일 동작을 포함한 전체 회귀 테스트

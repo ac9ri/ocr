@@ -14,6 +14,7 @@
     "test:phase2": "node --test \"test/phase2/*.test.js\"",
     "test:phase3": "node --test \"test/phase3/*.test.js\"",
     "test:phase4": "node --test \"test/phase4/*.test.js\"",
+    "test:phase9": "node --test \"test/phase9/*.test.js\"",
     "lint": "node --check src/cli.js"
   },
   "engines": {

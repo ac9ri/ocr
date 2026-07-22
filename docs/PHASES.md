@@ -140,6 +140,7 @@ npm run fixtures:generate
 - Phase 6: <https://github.com/ac9ri/ocr/issues/7>
 - Phase 7: <https://github.com/ac9ri/ocr/issues/8>
 - Phase 8: <https://github.com/ac9ri/ocr/issues/9>
+- Phase 9: <https://github.com/ac9ri/ocr/issues/10>
 
 ## Phase 6 — 비공개 실이미지 강건성 개선
 
@@ -199,6 +200,23 @@ npm run fixtures:generate
 - 해당 위치의 `I8`/`l8` 오인식 잔존 0건
 - Phase 7 결과와 비교할 때 변경 범위가 표 인접 본문으로 제한됨
 - 상세: [비공개 실이미지 검증](PRIVATE_IMAGE_VALIDATION.md)
+
+## Phase 9 — 이미지 폴더 일괄 처리와 전체 요약
+
+상태: DONE
+
+- CLI 입력 경로가 단일 파일인지 폴더인지 판별
+- 폴더 바로 아래 지원 이미지를 파일명 순서로 탐색
+- 이미지마다 독립된 출력 폴더를 사용하고 같은 기본 이름은 확장자로 구분
+- 개별 파일 실패 후에도 다음 파일을 처리하고 최종적으로 실패 종료 코드 반환
+- 사람이 보는 `batch-summary.md`와 자동화용 `batch-summary.json` 생성
+
+검증:
+
+- Phase 9 테스트: 3 pass, 0 fail
+- 전체 자동 테스트: 62 pass, 0 fail
+- 비지원 파일 무시, 빈 폴더 오류, 이름 충돌, 부분 실패 계속 처리 검증
+- 기존 단일 파일 CLI 및 OCR pipeline 회귀 테스트 통과
 
 ## 실제 문서 골든셋 인수 시험
 
