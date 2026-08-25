@@ -1,11 +1,13 @@
 # WordScan OCR
 
-가로 스캔 이미지 한 장에 2쪽이 들어 있는 Word 문서(`.docx`)를 쪽별로 나눠
-표·글·그림을 추출하고 Markdown으로 저장하는 CLI입니다.
+Word 문서(`.docx`), 다중 페이지 PDF, 단일 페이지 이미지와 가로 2-up 스캔
+이미지에서 표·글·그림을 추출하고 Markdown으로 저장하는 CLI입니다.
 
 ## 지원 기능
 
 - DOCX 안의 스캔 이미지를 본문 배치 순서대로 추출
+- PDF를 300dpi RGB 이미지로 렌더링하고 원래 페이지 순서대로 처리
+- 세로 단일 페이지 자동 판별 및 가로 단일/2-up 명시 옵션
 - 중앙 여백 자동 탐색 또는 수동 비율로 좌/우 2쪽 분할
 - 회색 저대비 워터마크 약화
 - 저해상도 워터마크 겹침용 다중 OCR과 표 인접 본문의 좌표 기반 행 복구
@@ -20,6 +22,8 @@
 인식 한계를 기록했습니다.
 [비공개 실이미지 검증](docs/PRIVATE_IMAGE_VALIDATION.md)에는 저장소에 원본을
 추가하지 않고 수행한 Phase 6·7 결과를 기록했습니다.
+[PDF 및 단일 페이지 검증](docs/PDF_INPUT_VALIDATION.md)에는 실제 다중 페이지
+PDF 렌더링과 CPU OCR 결과를 기록했습니다.
 
 개인정보 없는 합성 테스트 PNG/DOCX를 만드는 방법은
 [테스트 fixture 제작 안내](docs/TEST_FIXTURES.md)를 참고하세요.
@@ -29,6 +33,9 @@
 1. Node.js 20 이상
 2. Python 3.11
 3. `requirements-ocr.txt`에 고정된 PaddlePaddle/PaddleOCR/PaddleX 조합
+
+PDF 렌더링은 같은 Python 환경의 `pypdfium2`를 사용하며
+`requirements-ocr.txt`에 버전을 고정한다.
 
 PaddlePaddle 설치는 CPU/GPU와 운영체제에 따라 다르므로
 [공식 PaddleOCR 설치 문서](https://paddlepaddle.github.io/PaddleOCR/main/en/version3.x/installation.html)를
@@ -57,6 +64,24 @@ npm exec wordscan-ocr -- .\scan.docx -o .\output
 npm exec wordscan-ocr -- .\scan.png -o .\output `
   --paddle-python .\.venv-ocr\Scripts\python.exe
 ```
+
+다중 페이지 PDF를 처리하는 경우(각 PDF 페이지는 기본적으로 한 쪽):
+
+```powershell
+npm exec wordscan-ocr -- .\manual.pdf -o .\output\manual `
+  --paddle-python .\.venv-ocr\Scripts\python.exe
+```
+
+세로 이미지는 `auto`에서 단일 페이지로 처리된다. 가로 한 쪽 이미지처럼
+방향만으로 2-up 여부를 구분할 수 없는 경우에는 `single`을 명시한다.
+
+```powershell
+npm exec wordscan-ocr -- .\landscape-page.png -o .\output\landscape `
+  --page-layout single `
+  --paddle-python .\.venv-ocr\Scripts\python.exe
+```
+
+기존 가로 2-up 입력을 명시하려면 `--page-layout two-up`을 사용한다.
 
 폴더 바로 아래의 지원 이미지를 모두 처리하는 경우:
 
@@ -126,6 +151,7 @@ output-batch/
 ```text
 -o, --output <directory>       출력 디렉터리
     --split-ratio <0..1>       수동 좌/우 분할 위치
+    --page-layout <layout>     auto|single|two-up (기본값: auto)
     --watermark <mode>         off|conservative|strong|text-safe (기본값: text-safe)
     --device <device>          cpu|gpu:0 등
     --paddle-command <path>    PaddleOCR 실행 명령/경로
@@ -134,6 +160,7 @@ output-batch/
 ```
 
 `.doc`은 지원하지 않습니다. Word에서 `.docx`로 다시 저장한 후 실행하세요.
+`--page-layout single`과 `--split-ratio`는 함께 사용할 수 없습니다.
 
 ## 테스트
 

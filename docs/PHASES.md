@@ -141,6 +141,7 @@ npm run fixtures:generate
 - Phase 7: <https://github.com/ac9ri/ocr/issues/8>
 - Phase 8: <https://github.com/ac9ri/ocr/issues/9>
 - Phase 9: <https://github.com/ac9ri/ocr/issues/10>
+- Phase 10: <https://github.com/ac9ri/ocr/issues/11>
 
 ## Phase 6 — 비공개 실이미지 강건성 개선
 
@@ -217,6 +218,26 @@ npm run fixtures:generate
 - 전체 자동 테스트: 62 pass, 0 fail
 - 비지원 파일 무시, 빈 폴더 오류, 이름 충돌, 부분 실패 계속 처리 검증
 - 기존 단일 파일 CLI 및 OCR pipeline 회귀 테스트 통과
+
+## Phase 10 — PDF 및 단일 페이지 입력
+
+상태: DONE
+
+- `pypdfium2` bridge로 다중 페이지 PDF를 300dpi RGB PNG로 렌더링
+- PDF 페이지 순서와 원본 페이지 번호를 manifest에 보존
+- `--page-layout auto|single|two-up` 추가
+- `auto`에서 PDF·세로 이미지는 단일 페이지, 가로 이미지는 기존 2-up 처리
+- 가로 단일 페이지는 `--page-layout single`로 분할 생략
+- `--split-ratio`는 `auto`에서 2-up을 의미하며 `single`과의 동시 사용 차단
+
+검증:
+
+- PDF renderer/source 및 단일 페이지 회귀 테스트 통과
+- 실제 합성 2페이지 PDF의 렌더 PNG 2장 시각 검토 통과
+- 실제 CPU OCR: PDF 2페이지 → Markdown 2쪽, 표 2개, 그림 asset 2개
+- manifest: `pdfPageNumber` 1·2, `side=single`, `splitColumn=null`
+- 전체 자동 테스트: 70 pass, 0 fail
+- 상세: [PDF 및 단일 페이지 검증](PDF_INPUT_VALIDATION.md)
 
 ## 실제 문서 골든셋 인수 시험
 

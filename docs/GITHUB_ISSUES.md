@@ -119,3 +119,13 @@ URL: <https://github.com/ac9ri/ocr/issues/10>
 - 개별 실패 후 계속 처리 및 실패 종료 코드
 - `batch-summary.md`/`batch-summary.json` 전체 결과 생성
 - 기존 단일 파일 동작을 포함한 전체 회귀 테스트
+
+## Issue 11 — [Phase 10] PDF 및 단일 페이지 입력 지원
+
+URL: <https://github.com/ac9ri/ocr/issues/11>
+
+- pypdfium2 기반 다중 페이지 PDF 렌더링
+- PDF 페이지 순서와 `pdfPageNumber` manifest 보존
+- `auto|single|two-up` 페이지 layout 정책
+- 세로·가로 단일 페이지와 기존 2-up 회귀 테스트
+- 실제 2페이지 PDF 렌더 시각 검토 및 CPU OCR E2E 검증

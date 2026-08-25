@@ -7,6 +7,7 @@ import { SharpImageCodec } from "./sharp-codec.js";
 import { TwoUpPageSplitter } from "./page-splitter.js";
 import { WatermarkSuppressor } from "./watermark-suppressor.js";
 import { PaddleCliEngine } from "./paddle-cli-engine.js";
+import { PdfPageRenderer } from "./pdf-renderer.js";
 import { materializePage, writeMarkdownDocument } from "./markdown-assembler.js";
 
 const PADDLE_BRIDGE_SCRIPT = fileURLToPath(
@@ -26,6 +27,7 @@ export async function runPipeline({
   inputPath,
   outputDirectory,
   splitRatio = null,
+  pageLayout = "auto",
   watermarkMode = "text-safe",
   device = "cpu",
   paddleCommand = "paddleocr",
@@ -43,6 +45,9 @@ export async function runPipeline({
     dependencies.splitter ?? new TwoUpPageSplitter({ splitRatio });
   const suppressor =
     dependencies.suppressor ?? new WatermarkSuppressor({ mode: watermarkMode });
+  const pdfRenderer =
+    dependencies.pdfRenderer ??
+    new PdfPageRenderer({ command: paddlePython ?? "python" });
   const structureSuppressor =
     dependencies.structureSuppressor ??
     (watermarkMode === "text-safe"
@@ -65,7 +70,10 @@ export async function runPipeline({
 
   try {
     notify(onProgress, { type: "input:start", inputPath: absoluteInput });
-    const sources = await sourceLoader(absoluteInput);
+    const sources = await sourceLoader(absoluteInput, {
+      pdfRenderer,
+      pdfOutputDirectory: path.join(workDirectory, "pdf-pages"),
+    });
     notify(onProgress, { type: "input:complete", sheetCount: sources.length });
 
     let pageNumber = 0;
@@ -73,11 +81,27 @@ export async function runPipeline({
       const sheetNumber = sheetIndex + 1;
       notify(onProgress, { type: "sheet:start", sheetNumber, sheetCount: sources.length });
       const raster = await codec.decode(sources[sheetIndex].buffer);
-      const split = splitter.split(raster);
+      let effectivePageLayout = pageLayout;
+      if (effectivePageLayout === "auto") {
+        effectivePageLayout =
+          splitRatio !== null
+            ? "two-up"
+            : (sources[sheetIndex].pageLayout ??
+              (raster.width <= raster.height ? "single" : "two-up"));
+      }
+      const split =
+        effectivePageLayout === "single"
+          ? { splitColumn: null, pages: [raster] }
+          : splitter.split(raster);
 
       for (let sideIndex = 0; sideIndex < split.pages.length; sideIndex += 1) {
         pageNumber += 1;
-        const side = sideIndex === 0 ? "left" : "right";
+        const side =
+          effectivePageLayout === "single"
+            ? "single"
+            : sideIndex === 0
+              ? "left"
+              : "right";
         notify(onProgress, { type: "page:start", pageNumber, sheetNumber, side });
         const pageWorkDirectory = path.join(
           workDirectory,
@@ -115,6 +139,9 @@ export async function runPipeline({
           sheetNumber,
           side,
           sourceImage: sources[sheetIndex].name,
+          sourceDocument: sources[sheetIndex].sourceName,
+          pdfPageNumber: sources[sheetIndex].pdfPageNumber ?? null,
+          pageLayout: effectivePageLayout,
           sourceSize: { width: raster.width, height: raster.height },
           pageSize: { width: preprocessed.width, height: preprocessed.height },
           recoveryPageSize: recoveryImage
@@ -150,6 +177,7 @@ export async function runPipeline({
       },
       settings: {
         splitRatio,
+        pageLayout,
         watermarkMode,
         device,
         paddleCommand,

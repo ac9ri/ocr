@@ -127,8 +127,20 @@ export function extractDocxImages(buffer, sourceName = "document.docx") {
   return sheets;
 }
 
-export async function loadInputSources(inputPath) {
+export async function loadInputSources(
+  inputPath,
+  { pdfRenderer = null, pdfOutputDirectory = null } = {},
+) {
   const extension = path.extname(inputPath).toLowerCase();
+  if (extension === ".pdf") {
+    if (!pdfRenderer || !pdfOutputDirectory) {
+      throw new WordscanError(
+        "PDF_RENDERER_UNAVAILABLE",
+        "PDF 입력에는 pypdfium2가 설치된 Python이 필요합니다. OCR 가상환경은 --paddle-python으로 지정하세요.",
+      );
+    }
+    return await pdfRenderer.render(inputPath, pdfOutputDirectory);
+  }
   let buffer;
   try {
     buffer = await readFile(inputPath);

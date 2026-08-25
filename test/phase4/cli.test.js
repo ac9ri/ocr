@@ -27,6 +27,8 @@ test("CLI 옵션을 pipeline 설정으로 변환한다", () => {
     "0.48",
     "--watermark",
     "strong",
+    "--page-layout",
+    "two-up",
     "--device",
     "gpu:0",
     "--paddle-python",
@@ -37,6 +39,7 @@ test("CLI 옵션을 pipeline 설정으로 변환한다", () => {
   assert.match(options.outputDirectory, /converted$/);
   assert.equal(options.splitRatio, 0.48);
   assert.equal(options.watermarkMode, "strong");
+  assert.equal(options.pageLayout, "two-up");
   assert.equal(options.device, "gpu:0");
   assert.equal(path.isAbsolute(options.paddlePython), true);
   assert.match(options.paddlePython, /\.venv-ocr[\\/]python$/);
@@ -67,6 +70,31 @@ test("CLI 성공 시 결과 경로와 진행 상황을 출력한다", async () =
 test("CLI는 워터마크 겹침용 text-safe 모드를 허용한다", () => {
   const options = parseCliArguments(["scan.png", "--watermark", "text-safe"]);
   assert.equal(options.watermarkMode, "text-safe");
+});
+
+test("CLI는 auto, single, two-up 페이지 레이아웃만 허용한다", () => {
+  assert.equal(parseCliArguments(["scan.pdf"]).pageLayout, "auto");
+  assert.equal(
+    parseCliArguments(["scan.png", "--page-layout", "two-up"]).pageLayout,
+    "two-up",
+  );
+  assert.throws(
+    () => parseCliArguments(["scan.png", "--page-layout", "spread"]),
+    (error) =>
+      error instanceof WordscanError && error.code === "CLI_INVALID_PAGE_LAYOUT",
+  );
+  assert.throws(
+    () =>
+      parseCliArguments([
+        "scan.png",
+        "--page-layout",
+        "single",
+        "--split-ratio",
+        "0.5",
+      ]),
+    (error) =>
+      error instanceof WordscanError && error.code === "CLI_INCOMPATIBLE_OPTIONS",
+  );
 });
 
 test("입력 경로가 파일인지 폴더인지 판별한다", async (context) => {

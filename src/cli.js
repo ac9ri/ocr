@@ -9,16 +9,18 @@ import { runPipeline } from "./pipeline.js";
 
 const VERSION = "0.1.0";
 
-const HELP = `wordscan-ocr - 2-up Word 스캔 문서를 Markdown으로 변환
+const HELP = `wordscan-ocr - Word/PDF/이미지 스캔을 Markdown으로 변환
 
 사용법:
-  wordscan-ocr <input.docx|image|directory> [options]
+  wordscan-ocr <input.docx|pdf|image|directory> [options]
 
+  PDF는 각 페이지를 한 쪽으로 처리합니다.
   directory는 바로 아래의 지원 이미지 파일을 이름순으로 일괄 처리합니다.
 
 옵션:
   -o, --output <directory>       출력 디렉터리 (기본값: ./output)
       --split-ratio <0..1>       수동 좌/우 분할 위치
+      --page-layout <layout>     auto|single|two-up (기본값: auto)
       --watermark <mode>         off|conservative|strong|text-safe (기본값: text-safe)
       --device <device>          cpu|gpu:0 등 (기본값: cpu)
       --paddle-command <path>    PaddleOCR 실행 명령 (기본값: paddleocr)
@@ -41,6 +43,7 @@ export function parseCliArguments(argv) {
     inputPath: null,
     outputDirectory: path.resolve("output"),
     splitRatio: null,
+    pageLayout: "auto",
     watermarkMode: "text-safe",
     device: "cpu",
     paddleCommand: "paddleocr",
@@ -79,6 +82,15 @@ export function parseCliArguments(argv) {
         );
       }
       index += 1;
+    } else if (argument === "--page-layout") {
+      options.pageLayout = requiredValue(argv, index, argument);
+      if (!["auto", "single", "two-up"].includes(options.pageLayout)) {
+        throw new WordscanError(
+          "CLI_INVALID_PAGE_LAYOUT",
+          "--page-layout은 auto, single, two-up 중 하나여야 합니다.",
+        );
+      }
+      index += 1;
     } else if (argument === "--device") {
       options.device = requiredValue(argv, index, argument);
       index += 1;
@@ -100,6 +112,12 @@ export function parseCliArguments(argv) {
         "입력 파일 또는 폴더는 하나만 지정할 수 있습니다.",
       );
     }
+  }
+  if (options.pageLayout === "single" && options.splitRatio !== null) {
+    throw new WordscanError(
+      "CLI_INCOMPATIBLE_OPTIONS",
+      "--page-layout single에서는 --split-ratio를 함께 사용할 수 없습니다.",
+    );
   }
   return options;
 }
